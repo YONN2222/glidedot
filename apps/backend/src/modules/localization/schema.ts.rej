@@ -1,0 +1,12 @@
+@@ -62,2 +63,11 @@
+ }));
+ 
++// Activity Logs Table
++export const activityLogs = sqliteTable('activity_logs', {
++    id: integer('id').primaryKey({ autoIncrement: true }),
++    userId: integer('user_id'),
++    projectId: integer('project_id').references(() => projects.id),
++    action: text('action').notNull(),
++    details: text('details').notNull(),
++    createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
++});

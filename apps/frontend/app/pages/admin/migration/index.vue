@@ -1,0 +1,383 @@
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+
+definePageMeta({
+  layout: 'default'
+})
+
+const { fetchApi } = useApi()
+const toast = useToast()
+const { settings, saveSettings } = useSettings()
+
+const s3BackupEnabled = computed({
+  get: () => settings.value.s3BackupEnabled === 'true',
+  set: async (val) => {
+    settings.value.s3BackupEnabled = String(val)
+    const success = await saveSettings({ s3BackupEnabled: String(val) })
+    if (success) {
+      toast.add({ title: val ? 'S3 Backups enabled' : 'S3 Backups disabled', color: 'success' })
+    }
+  }
+})
+
+const projects = ref<{ id: number; name: string }[]>([])
+const languages = ref<{ id: number; code: string; name: string }[]>([])
+const selectedProjectId = ref<number | null>(null)
+const selectedLanguageId = ref<number | null>(null)
+
+const fileInput = ref<HTMLInputElement | null>(null)
+const isImporting = ref(false)
+const isExporting = ref(false)
+
+const backupFileInput = ref<HTMLInputElement | null>(null)
+const isBackingUp = ref(false)
+const isRestoring = ref(false)
+const isRestoreModalOpen = ref(false)
+const pendingRestoreFile = ref<File | null>(null)
+const isTriggeringS3 = ref(false)
+
+const loadProjects = async () => {
+  try {
+    const projs = await fetchApi('/localization/projects')
+    projects.value = projs as { id: number; name: string }[]
+  } catch {
+    toast.add({ title: 'Failed to load projects', color: 'error' })
+  }
+}
+
+const loadLanguages = async () => {
+  if (!selectedProjectId.value) {
+    languages.value = []
+    return
+  }
+  try {
+    const langs = await fetchApi(`/localization/projects/${selectedProjectId.value}/languages`)
+    languages.value = langs as { id: number; code: string; name: string }[]
+  } catch {
+    toast.add({ title: 'Failed to load languages', color: 'error' })
+  }
+}
+
+watch(selectedProjectId, () => {
+  selectedLanguageId.value = null
+  loadLanguages()
+})
+
+onMounted(() => {
+  loadProjects()
+})
+
+const exportData = async () => {
+  if (!selectedProjectId.value || !selectedLanguageId.value) return
+  isExporting.value = true
+  try {
+    const data = await fetchApi(`/localization/projects/${selectedProjectId.value}/languages/${selectedLanguageId.value}/export`)
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    
+    const project = projects.value.find(p => p.id === selectedProjectId.value)
+    const language = languages.value.find(l => l.id === selectedLanguageId.value)
+    a.download = `glde_${project?.name?.toLowerCase() || selectedProjectId.value}_${language?.code?.toLowerCase() || selectedLanguageId.value}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    toast.add({ title: 'Export successful', color: 'success' })
+  } catch {
+    toast.add({ title: 'Failed to export', color: 'error' })
+  } finally {
+    isExporting.value = false
+  }
+}
+
+const handleFileSelect = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  if (!selectedProjectId.value || !selectedLanguageId.value) {
+    toast.add({ title: 'Please select project and language first', color: 'error' })
+    return
+  }
+
+  isImporting.value = true
+  try {
+    const text = await file.text()
+    const jsonData = JSON.parse(text)
+    
+    const result = await fetchApi(`/localization/projects/${selectedProjectId.value}/languages/${selectedLanguageId.value}/import`, {
+      method: 'POST',
+      body: jsonData
+    })
+
+    toast.add({ title: `Import successful (${result.imported} keys imported)`, color: 'success' })
+  } catch (e) {
+    console.error(e)
+    toast.add({ title: 'Failed to parse or import JSON', color: 'error' })
+  } finally {
+    isImporting.value = false
+    if (fileInput.value) fileInput.value.value = ''
+  }
+}
+
+const triggerFileInput = () => {
+  fileInput.value?.click()
+}
+
+const downloadBackup = async () => {
+  isBackingUp.value = true
+  try {
+    const data: Blob = await fetchApi('/admin/migration/backup', { responseType: 'blob' }) as Blob
+    const url = URL.createObjectURL(data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `glide-backup-${new Date().toISOString().split('T')[0]}.zip`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    toast.add({ title: 'Backup downloaded successfully', color: 'success' })
+  } catch {
+    toast.add({ title: 'Failed to download backup', color: 'error' })
+  } finally {
+    isBackingUp.value = false
+  }
+}
+
+const handleBackupSelect = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) {
+    isRestoreModalOpen.value = false
+    return
+  }
+
+  isRestoring.value = true
+  isRestoreModalOpen.value = false
+  
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    await fetchApi('/admin/migration/backup', {
+      method: 'POST',
+      body: formData
+    })
+
+    toast.add({ title: 'Backup restored successfully', color: 'success' })
+    loadProjects()
+  } catch (e) {
+    console.error(e)
+    toast.add({ title: 'Failed to restore backup', color: 'error' })
+  } finally {
+    isRestoring.value = false
+    isRestoreModalOpen.value = false
+    pendingRestoreFile.value = null
+    if (backupFileInput.value) backupFileInput.value.value = ''
+  }
+}
+
+const triggerBackupInput = () => {
+  isRestoreModalOpen.value = true
+}
+
+const confirmAndSelectFile = () => {
+  backupFileInput.value?.click()
+}
+
+const triggerS3Backup = async () => {
+  isTriggeringS3.value = true
+  try {
+    await fetchApi('/admin/migration/s3-backup/trigger', { method: 'POST' })
+    toast.add({ title: 'S3 Backup successfully uploaded', color: 'success' })
+  } catch {
+    toast.add({ title: 'Failed to trigger S3 backup', color: 'error' })
+  } finally {
+    isTriggeringS3.value = false
+  }
+}
+</script>
+
+<template>
+  <div class="max-w-3xl w-full">
+    <div class="flex flex-col gap-10">
+      <div class="flex flex-col gap-4">
+        <div>
+          <h1 class="text-xl font-bold">Migration</h1>
+          <p class="text-sm text-neutral-400">Migrate your data from systems like Traduora or export your translations.</p>
+        </div>
+        <u-card class="flex flex-col h-full" :ui="{ body: { base: 'flex-1 flex flex-col' } }">
+        <div class="flex flex-col gap-6">
+        <div class="grid grid-cols-2 gap-4">
+          <u-form-field label="Project">
+            <u-select
+              v-model="selectedProjectId"
+              :items="projects.map(p => ({ label: p.name, value: p.id }))"
+              placeholder="Select project"
+              class="w-full"
+            />
+          </u-form-field>
+
+          <u-form-field label="Language">
+            <u-select
+              v-model="selectedLanguageId"
+              :items="languages.map(l => ({ label: l.name, value: l.id }))"
+              placeholder="Select language"
+              :disabled="!selectedProjectId"
+              class="w-full"
+            />
+          </u-form-field>
+        </div>
+
+        <u-separator />
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="flex flex-col gap-2">
+            <h3 class="font-medium text-sm">Export Translations</h3>
+            <p class="text-xs text-neutral-400 mb-2">Download a flat JSON file containing all translations for the selected project and language.</p>
+            <u-button 
+              label="Export to JSON" 
+              icon="i-lucide-download" 
+              color="primary" 
+              variant="subtle"
+              :disabled="!selectedLanguageId"
+              :loading="isExporting"
+              class="justify-center"
+              @click="exportData"
+            />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <h3 class="font-medium text-sm">Import Translations</h3>
+            <p class="text-xs text-neutral-400 mb-2">Upload a flat JSON file (e.g. from Traduora) to import translations. Existing keys will be updated.</p>
+            <input 
+              ref="fileInput" 
+              type="file" 
+              accept=".json" 
+              class="hidden" 
+              @change="handleFileSelect"
+            >
+            <u-button 
+              label="Import from JSON" 
+              icon="i-lucide-upload" 
+              color="primary" 
+              :disabled="!selectedLanguageId"
+              :loading="isImporting"
+              class="justify-center"
+              @click="triggerFileInput"
+            />
+          </div>
+          </div>
+        </div>
+        </u-card>
+      </div>
+
+      <div class="flex flex-col gap-4">
+        <div>
+          <h1 class="text-xl font-bold">System Backup & Restore</h1>
+          <p class="text-sm text-neutral-400">Export or import a complete backup of your localization data (projects, languages, keys, and translations).</p>
+        </div>
+        <u-card class="flex flex-col h-full" :ui="{ body: { base: 'flex-1 flex flex-col' } }">
+          <div class="flex flex-col gap-6">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+              <h3 class="font-medium text-sm">Download Backup</h3>
+              <p class="text-xs text-neutral-400 mb-2">Download a ZIP file containing all projects, languages, labels, and translations.</p>
+              <u-button 
+                label="Download Backup ZIP" 
+                icon="i-lucide-download" 
+                color="primary" 
+                variant="subtle"
+                :loading="isBackingUp"
+                class="justify-center"
+                @click="downloadBackup"
+              />
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <h3 class="font-medium text-sm">Restore Backup</h3>
+              <p class="text-xs text-neutral-400 mb-2">Upload a previously generated ZIP backup. Warning: This will overwrite your existing data.</p>
+              <input 
+                ref="backupFileInput" 
+                type="file" 
+                accept=".zip" 
+                class="hidden" 
+                @change="handleBackupSelect"
+              >
+              <u-button 
+                label="Restore Backup" 
+                icon="i-lucide-upload" 
+                color="primary" 
+                :loading="isRestoring"
+                class="justify-center"
+                @click="triggerBackupInput"
+              />
+            </div>
+          </div>
+
+          <u-separator />
+
+          <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-1">
+              <h3 class="font-medium text-sm">S3 Backups</h3>
+              <p class="text-xs text-neutral-400">Configure remote backups to an S3-compatible storage (AWS, MinIO, etc.).</p>
+            </div>
+            
+            <div class="relative">
+              <div v-if="!settings.s3Configured" class="absolute inset-0 z-20 backdrop-blur-[2px] bg-neutral-950/40 rounded-xl flex items-center justify-center">
+                <div class="bg-black/60 p-4 rounded-lg border border-neutral-800 text-center flex flex-col gap-2 max-w-sm">
+                  <u-icon name="i-lucide-cloud-off" class="w-8 h-8 text-neutral-400 mx-auto" />
+                  <span class="font-bold">S3 Not Configured</span>
+                  <span class="text-xs text-neutral-400">Please provide S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY, and S3_SECRET_KEY in your environment variables.</span>
+                </div>
+              </div>
+              
+              <div class="grid grid-cols-2 gap-4 p-4 border border-neutral-800 rounded-xl bg-black/20" :class="{ 'opacity-50 pointer-events-none': !settings.s3Configured }">
+                <u-form-field label="Schedule Automatic Backups">
+                  <div class="flex items-center gap-2 mt-2">
+                    <u-switch v-model="s3BackupEnabled" />
+                    <span class="text-sm text-neutral-400">Run backups automatically</span>
+                  </div>
+                </u-form-field>
+
+                <u-form-field label="Backup Frequency">
+                  <u-select
+                    v-model="settings.s3BackupFrequency"
+                    :items="[{label: 'Daily', value: 'daily'}, {label: 'Weekly', value: 'weekly'}, {label: 'Monthly', value: 'monthly'}]"
+                    placeholder="Select frequency"
+                    class="w-full"
+                    @change="async () => {
+                      const success = await saveSettings({ s3BackupFrequency: settings.s3BackupFrequency });
+                      if (success) toast.add({ title: 'Backup frequency updated', color: 'success' });
+                    }"
+                  />
+                </u-form-field>
+                
+                <div class="col-span-2 pt-2 flex justify-end">
+                  <u-button 
+                    label="Manually Trigger S3 Backup" 
+                    icon="i-lucide-play" 
+                    color="neutral" 
+                    variant="subtle"
+                    :loading="isTriggeringS3"
+                    @click="triggerS3Backup"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          </div>
+        </u-card>
+      </div>
+    </div>
+
+    <migration-restore-modal
+      v-model="isRestoreModalOpen"
+      :is-restoring="isRestoring"
+      @confirm="confirmAndSelectFile"
+    />
+  </div>
+</template>

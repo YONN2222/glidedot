@@ -1,0 +1,50 @@
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
+import pluginDB from './plugins/db';
+import authModule from './modules/auth';
+import setupModule from './modules/setup';
+import sessionsModule from './modules/sessions';
+import usersModule from './modules/users';
+import teamsModule from './modules/teams';
+import adminModule from './modules/admin';
+import localizationModule from './modules/localization';
+import settingsModule from './modules/settings';
+import migrationModule from './modules/migration';
+import multipart from '@fastify/multipart';
+
+export async function buildApp() {
+    const app = Fastify({
+        logger: process.env.NODE_ENV !== 'test',
+        routerOptions: {
+            ignoreTrailingSlash: true
+        }
+    });
+
+    await app.register(cors, {
+        origin: true,
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        exposedHeaders: ['Content-Disposition', 'Content-Length', 'Content-Type'],
+    });
+
+    // Register Plugins
+    await app.register(pluginDB);
+    await app.register(multipart, {
+        limits: {
+            fileSize: 100 * 1024 * 1024 // 100MB
+        }
+    });
+
+    // Register Modules
+    await app.register(authModule);
+    await app.register(setupModule);
+    await app.register(sessionsModule);
+    await app.register(usersModule);
+    await app.register(teamsModule);
+    await app.register(adminModule);
+    await app.register(localizationModule, { prefix: '/v1/localization' });
+    await app.register(settingsModule, { prefix: '/v1/admin/settings' });
+    await app.register(migrationModule, { prefix: '/v1/admin/migration' });
+
+    return app;
+}

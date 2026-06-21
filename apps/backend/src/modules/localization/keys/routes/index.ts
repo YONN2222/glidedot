@@ -1,0 +1,151 @@
+import { FastifyInstance } from 'fastify';
+import { KeyService } from '../services/key.service';
+
+export default async function keyRoutes(fastify: FastifyInstance) {
+    const service = new KeyService(fastify.db);
+    const { checkProjectAccess, checkLanguagePermission } = fastify.authHooks;
+
+    fastify.get('/:projectId', { preHandler: [checkProjectAccess] }, async (request) => {
+        const { projectId } = request.params as { projectId: string };
+        return service.getByProject(parseInt(projectId));
+    });
+
+    fastify.post('/:projectId', { preHandler: [checkProjectAccess] }, async (request, reply) => {
+        const { projectId } = request.params as { projectId: string };
+        const body = request.body as { key: string; labelIds?: number[] };
+        const result = await service.createKey(parseInt(projectId), body.key, body.labelIds);
+        
+        if (request.user) {
+            await service.logActivity(request.user.id, parseInt(projectId), 'KEY_CREATED', JSON.stringify({ key: body.key }));
+        }
+        
+        reply.status(201).send(result);
+    });
+
+    fastify.post('/:projectId/:keyId/translations', { preHandler: [checkProjectAccess, checkLanguagePermission] }, async (request) => {
+        const { projectId, keyId } = request.params as { projectId: string; keyId: string };
+        const body = request.body as { languageId: number; value: string };
+        
+        const { translationKeys, languages, translations } = await import('../../schema');
+        const { eq, and } = await import('drizzle-orm');
+
+        const keyRecord = await fastify.db.select().from(translationKeys).where(eq(translationKeys.id, parseInt(keyId))).limit(1);
+        const keyName = keyRecord.length > 0 ? keyRecord[0].key : `Key #${keyId}`;
+
+        const langRecord = await fastify.db.select().from(languages).where(eq(languages.id, body.languageId)).limit(1);
+        const languageCode = langRecord.length > 0 ? langRecord[0].code : `Lang #${body.languageId}`;
+
+        const oldTranslation = await fastify.db.select().from(translations).where(and(eq(translations.keyId, parseInt(keyId)), eq(translations.languageId, body.languageId))).limit(1);
+        const oldValue = oldTranslation.length > 0 ? oldTranslation[0].value : "";
+
+        const result = await service.upsertTranslation(parseInt(projectId), parseInt(keyId), body.languageId, body.value, request.user!.id);
+        if (request.user) {
+            await service.logActivity(request.user.id, parseInt(projectId), 'TRANSLATION_UPDATED', JSON.stringify({ 
+                keyId, 
+                languageId: body.languageId,
+                keyName,
+                languageCode,
+                oldValue,
+                newValue: body.value
+            }));
+        }
+        return result;
+    });
+
+    fastify.delete('/:projectId/:keyId', { preHandler: [checkProjectAccess] }, async (request) => {
+        const { projectId, keyId } = request.params as { projectId: string, keyId: string };
+        return service.deleteKey(parseInt(projectId), parseInt(keyId));
+    });
+
+    fastify.post('/:projectId/:keyId/translations/:languageId/approve', { preHandler: [checkProjectAccess] }, async (request, reply) => {
+        const { projectId, keyId, languageId } = request.params as { projectId: string, keyId: string, languageId: string };
+        const { translations } = await import('../../schema');
+        const { eq, and } = await import('drizzle-orm');
+        
+        // Ensure user is reviewer or admin
+        if (!request.user?.isAdmin && !request.user?.isReviewer) {
+            return reply.status(403).send({ error: 'Only admins or reviewers can approve translations' });
+        }
+
+        const [existing] = await fastify.db.select().from(translations).where(and(eq(translations.keyId, parseInt(keyId)), eq(translations.languageId, parseInt(languageId))));
+        if (!existing || existing.reviewStatus !== 'PENDING_REVIEW') {
+            return reply.status(400).send({ error: 'Translation is not pending review' });
+        }
+
+        const updated = await fastify.db.update(translations)
+            .set({ value: existing.draftValue || existing.value, draftValue: null, reviewStatus: 'APPROVED' })
+            .where(eq(translations.id, existing.id))
+            .returning();
+            
+        await service.logActivity(request.user.id, parseInt(projectId), 'TRANSLATION_APPROVED', JSON.stringify({ keyId, languageId }));
+        return updated[0];
+    });
+
+    fastify.post('/:projectId/:keyId/translations/:languageId/reject', { preHandler: [checkProjectAccess] }, async (request, reply) => {
+        const { projectId, keyId, languageId } = request.params as { projectId: string, keyId: string, languageId: string };
+        const { translations } = await import('../../schema');
+        const { eq, and } = await import('drizzle-orm');
+        
+        // Ensure user is reviewer or admin
+        if (!request.user?.isAdmin && !request.user?.isReviewer) {
+            return reply.status(403).send({ error: 'Only admins or reviewers can reject translations' });
+        }
+
+        const [existing] = await fastify.db.select().from(translations).where(and(eq(translations.keyId, parseInt(keyId)), eq(translations.languageId, parseInt(languageId))));
+        if (!existing || existing.reviewStatus !== 'PENDING_REVIEW') {
+            return reply.status(400).send({ error: 'Translation is not pending review' });
+        }
+
+        const updated = await fastify.db.update(translations)
+            .set({ draftValue: null, reviewStatus: 'REJECTED' })
+            .where(eq(translations.id, existing.id))
+            .returning();
+
+        await service.logActivity(request.user.id, parseInt(projectId), 'TRANSLATION_REJECTED', JSON.stringify({ keyId, languageId }));
+        return updated[0];
+    });
+
+    fastify.post('/:projectId/bulk-delete', { preHandler: [checkProjectAccess] }, async (request) => {
+        const { projectId } = request.params as { projectId: string };
+        const { keyIds } = request.body as { keyIds: number[] };
+        return service.bulkDeleteKeys(parseInt(projectId), keyIds);
+    });
+
+    fastify.post('/:projectId/:keyId/labels', { preHandler: [checkProjectAccess] }, async (request) => {
+        const { projectId, keyId } = request.params as { projectId: string, keyId: string };
+        const { labelId } = request.body as { labelId: number };
+        return service.addLabelToKey(parseInt(projectId), parseInt(keyId), labelId);
+    });
+
+    fastify.post('/:projectId/bulk-labels-add', { preHandler: [checkProjectAccess] }, async (request) => {
+        const { projectId } = request.params as { projectId: string };
+        const { keyIds, labelId } = request.body as { keyIds: number[], labelId: number };
+        return service.bulkAddLabelToKeys(parseInt(projectId), keyIds, labelId);
+    });
+
+    fastify.delete('/:projectId/:keyId/labels/:labelId', { preHandler: [checkProjectAccess] }, async (request) => {
+        const { projectId, keyId, labelId } = request.params as { projectId: string, keyId: string, labelId: string };
+        return service.removeLabelFromKey(parseInt(projectId), parseInt(keyId), parseInt(labelId));
+    });
+
+    fastify.post('/:projectId/bulk-labels-remove', { preHandler: [checkProjectAccess] }, async (request) => {
+        const { projectId } = request.params as { projectId: string };
+        const { keyIds, labelId } = request.body as { keyIds: number[], labelId: number };
+        return service.bulkRemoveLabelFromKeys(parseInt(projectId), keyIds, labelId);
+    });
+
+    fastify.post('/:projectId/:keyId/auto-translate', { preHandler: [checkProjectAccess] }, async (request) => {
+        const { projectId, keyId } = request.params as { projectId: string; keyId: string };
+        const { targetLanguageIds, provider } = request.body as { targetLanguageIds: number[], provider?: 'deepl' | 'google' };
+
+        await service.autoTranslate(parseInt(projectId), parseInt(keyId), targetLanguageIds, provider || 'google', request.user?.id);
+        return { success: true };
+    });
+
+    fastify.post('/:projectId/:keyId/suggest', { preHandler: [checkProjectAccess] }, async (request) => {
+        const { projectId, keyId } = request.params as { projectId: string; keyId: string };
+        const { targetLanguageId, provider } = request.body as { targetLanguageId: number, provider?: 'deepl' | 'google' };
+
+        return service.suggestTranslation(parseInt(projectId), parseInt(keyId), targetLanguageId, provider || 'google', request.user?.id);
+    });
+}

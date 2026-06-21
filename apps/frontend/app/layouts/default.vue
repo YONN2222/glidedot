@@ -1,0 +1,354 @@
+<script setup lang="ts">
+import type { DropdownMenuItem, NavigationMenuItem, BreadcrumbItem } from '@nuxt/ui'
+import type { Project } from '@glidedot/types'
+import { useThemeColor } from '~/composables/useThemeColor'
+
+const route = useRoute();
+const { fetchApi } = useApi()
+const { user, isAdmin } = useAuth()
+const { settings, loadSettings } = useSettings()
+const appConfig = useAppConfig()
+
+useThemeColor(computed(() => appConfig.ui.colors.primary))
+
+await loadSettings()
+
+// Apply Whitelabeling Settings
+onMounted(() => {
+  if (settings.value.primaryColor) {
+    appConfig.ui.colors.primary = settings.value.primaryColor
+  }
+})
+
+const { data: projectsData } = await useAsyncData('projects', () => fetchApi('/localization/projects'))
+const projects = computed<Project[]>(() => (projectsData.value as Project[]) || [])
+
+const isSidebarOpen = ref(true)
+const isMobileMenuOpen = ref(false)
+const isSettingsMenuOpen = ref(false)
+const openPrimaryItems = ref([])
+const openSecondaryItems = ref(['item-0'])
+
+const isProjectContext = computed(() => route.path.startsWith("/projects/"))
+const { currentProject } = useProject(projects)
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
+  if (route.path === "/") return [{label: 'Home'}]
+
+  const segments = route.path.split('/').filter(Boolean)
+  return segments.map((segment, index) => {
+    let label = segment.charAt(0).toUpperCase() + segment.slice(1)
+    
+    // Replace project ID with project name
+    if (index === 1 && segments[0] === 'projects' && currentProject.value?.name) {
+      label = currentProject.value.name
+    }
+    
+    return { label }
+  })
+})
+
+const toggleSidebar = (): void => {
+  isSidebarOpen.value = !isSidebarOpen.value;
+}
+
+const apiDocsItems: ComputedRef<NavigationMenuItem[]> = computed(() => [
+  {
+    label: 'API-Docs',
+    icon: 'i-lucide-book-open',
+    href: '/docs/api',
+  }
+])
+
+const primaryItems: ComputedRef<NavigationMenuItem[]> = computed(() => {
+  const items: NavigationMenuItem[] = [
+    {
+      label: 'Home',
+      icon: 'i-lucide-house',
+      href: '/',
+    },
+    {
+      label: currentProject.value?.name || 'Projects',
+      icon: 'i-lucide-layout-dashboard',
+      defaultOpen: route.path.startsWith('/projects'),
+      children: [
+        ...projects.value.map(project => ({
+          label: project.name,
+          icon: 'i-lucide-folder',
+          href: `/projects/${project.id}`,
+          class: currentProject.value?.id === project.id ? '!text-primary !bg-transparent font-medium' : ''
+        }))
+      ]
+    },
+  ]
+
+  if (isAdmin.value) {
+    items.push({
+      label: 'Admin',
+      icon: 'i-lucide-shield-check',
+      class: 'hidden md:flex',
+      defaultOpen: route.path.startsWith('/admin'),
+      children: [
+        {
+          label: 'Manage Projects',
+          icon: 'i-lucide-folder-cog',
+          href: '/admin/projects'
+        },
+        {
+          label: 'Manage Teams',
+          icon: 'i-lucide-users-round',
+          href: '/admin/teams'
+        },
+        {
+          label: 'Manage Users',
+          icon: 'i-lucide-user-cog',
+          href: '/admin/users'
+        },
+        {
+          label: 'Activity Logs',
+          icon: 'i-lucide-activity',
+          href: '/admin/activity'
+        },
+        {
+          label: 'Migration',
+          icon: 'i-lucide-file-json-2',
+          href: '/admin/migration'
+        },
+        {
+          label: 'Settings',
+          icon: 'i-lucide-settings',
+          defaultOpen: route.path.startsWith('/admin/settings'),
+          children: [
+            {
+              label: 'Whitelabeling',
+              icon: 'i-lucide-palette',
+              href: '/admin/settings/whitelabeling'
+            }
+          ]
+        }
+      ]
+    })
+  }
+
+  return items
+})
+
+const secondaryItems = computed<NavigationMenuItem[]>(() => [
+  {
+    label: 'Localization',
+    icon: 'i-lucide-languages',
+    defaultOpen: true,
+    children: [
+      {
+        label: 'Keys',
+        icon: 'i-lucide-logs',
+        href: `/projects/${currentProject.value?.id}/localization/keys`
+      },
+      {
+        label: 'Labels',
+        icon: 'i-lucide-tag',
+        href: `/projects/${currentProject.value?.id}/localization/labels`
+      },
+      {
+        label: 'Languages',
+        icon: 'i-lucide-flag',
+        href: `/projects/${currentProject.value?.id}/localization/languages`
+      },
+      {
+        label: 'Translations',
+        icon: 'i-lucide-a-large-small',
+        href: `/projects/${currentProject.value?.id}/localization/translations`
+      },
+      {
+        label: 'Reviews',
+        icon: 'i-lucide-check-circle',
+        href: `/projects/${currentProject.value?.id}/localization/reviews`
+      },
+    ]
+  }
+])
+
+const profileItems: DropdownMenuItem[] = [
+  {
+    label: 'Account',
+    icon: 'i-lucide-user',
+    href: '/settings/account'
+  },
+  {
+    label: 'Settings',
+    icon: 'i-lucide-cog',
+    href: '/settings'
+  },
+  {
+    label: 'Logout',
+    icon: 'i-lucide-log-out',
+    href: '/logout'
+  }
+]
+
+// Watch for sidebar changes
+watch(isSidebarOpen, (isOpen) => {
+  // If we needed to handle anything on close, we could do it here
+})
+
+// Watch for route changes to close mobile menu
+watch(() => route.path, () => {
+  isMobileMenuOpen.value = false
+  isSettingsMenuOpen.value = false
+})
+
+// Removed v-model arrays and watchers entirely to let UNavigationMenu run uncontrolled.
+// This prevents the Nuxt UI 3 bug where clicking a nested child Accordion 
+// overwrites the root Accordion's v-model and forces the parent to collapse.
+</script>
+
+<template>
+  <div class="flex min-h-svh bg-neutral-950">
+    <u-sidebar class="hidden md:flex" v-model:open="isSidebarOpen" variant="inset" collapsible="icon" side="left" title="Navigation"
+               :ui="{ header: 'min-h-none p-2' }">
+
+      <template #header>
+        <div class="flex flex-col items-center w-full">
+          <div class="flex flex-row items-center">
+            <a href="/" class="flex items-center justify-center py-2 px-1">
+              <div v-if="isSidebarOpen" class="text-3xl font-black tracking-tighter text-white font-sans flex items-baseline">
+                <template v-if="settings.logoType === 'image'">
+                  <img :src="settings.logoUrl" alt="Logo" class="h-6 w-auto object-contain shrink-0" >
+                </template>
+                <template v-else>
+                  {{ settings.logoText || 'glide' }}<span v-if="settings.logoShowDot !== 'false'" class="text-primary-500">.</span>
+                </template>
+              </div>
+              <div v-else class="text-2xl font-black tracking-tighter text-white font-sans flex items-baseline">
+                <template v-if="settings.logoType === 'image'">
+                  <img :src="settings.logoUrlMinimal || settings.logoUrl" alt="Logo" class="h-6 w-auto object-contain shrink-0" >
+                </template>
+                <template v-else>
+                  {{ settings.logoTextMinimal || 'g' }}<span v-if="settings.logoShowDot !== 'false'" class="text-primary-500">.</span>
+                </template>
+              </div>
+            </a>
+          </div>
+        </div>
+      </template>
+
+      <u-navigation-menu :key="route.path.split('/')[1]" :items="primaryItems" orientation="vertical" multiple
+                         :ui="{ link: 'p-2 overflow-hidden' }"/>
+      <u-separator/>
+      <u-navigation-menu v-if="isProjectContext" :key="`secondary-${route.path.split('/')[1]}`" :items="secondaryItems" multiple
+                         orientation="vertical" :ui="{ link: 'p-2 overflow-hidden' }"/>
+                         
+      <div class="mt-auto"></div>
+      <u-separator/>
+      <u-navigation-menu :key="`api-docs-${route.path.split('/')[1]}`" :items="apiDocsItems" orientation="vertical"
+                         :ui="{ link: 'p-2 overflow-hidden' }"/>
+
+      <template #footer>
+        <u-dropdown-menu :items="profileItems" :content="{ side: 'top' }" class="cursor-pointer">
+          <div v-if="isSidebarOpen" class="flex flex-col w-full p-2 rounded-lg hover:bg-neutral-800">
+            <u-user
+                :name="user?.username || 'User'"
+                :description="user?.isAdmin ? 'Administrator' : 'Member'"
+                :avatar="{
+                            src: user?.avatarUrl || undefined,
+                            text: !user?.avatarUrl ? getAvatarText(user?.username) : undefined,
+                            style: !user?.avatarUrl ? { backgroundColor: getAvatarColor(user?.username), color: '#171717' } : {},
+                            loading: 'lazy'
+                        }"
+            />
+          </div>
+          <div v-else class="flex flex-col items-center w-full h-auto">
+            <u-avatar
+                :src="user?.avatarUrl || undefined"
+                :text="!user?.avatarUrl ? getAvatarText(user?.username) : undefined"
+                :style="!user?.avatarUrl ? { backgroundColor: getAvatarColor(user?.username), color: '#171717' } : {}"
+                loading="lazy"
+                size="md"
+            />
+          </div>
+        </u-dropdown-menu>
+      </template>
+    </u-sidebar>
+
+    <div class="flex-1 flex flex-col overflow-clip md:rounded-xl md:ring md:ring-default bg-neutral-900 md:my-6 mb-0 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+
+      <div class="sticky top-0 z-40 bg-neutral-900/80 backdrop-blur-xl py-2 flex items-center px-4 border-b border-default space-x-4 pt-[max(0.5rem,env(safe-area-inset-top))]">
+        <u-button
+            class="hidden md:inline-flex"
+            :icon="isSidebarOpen ? 'i-lucide-panel-left' : 'i-lucide-panel-right'"
+            color="neutral"
+            variant="ghost"
+            aria-label="Toggle sidebar"
+            @click="toggleSidebar"
+        />
+
+        <u-breadcrumb :items="breadcrumbItems">
+          <template #separator>
+            <span class="mx-2 text-muted">/</span>
+          </template>
+        </u-breadcrumb>
+      </div>
+
+      <div class="flex-1 p-4">
+        <slot/>
+      </div>
+    </div>
+
+    <!-- Mobile Project Modal -->
+    <u-modal v-model:open="isMobileMenuOpen" class="md:hidden" title="Projects & Navigation">
+      <template #body>
+        <div class="p-2 flex-1 flex flex-col gap-2">
+          <u-navigation-menu 
+            :items="projects.map(p => ({ label: p.name, icon: 'i-lucide-folder', href: `/projects/${p.id}`, class: currentProject?.id === p.id ? '!text-primary bg-primary/10' : '' }))" 
+            orientation="vertical" 
+            :ui="{ link: 'p-2' }"
+          />
+          
+          <template v-if="isProjectContext">
+            <u-separator/>
+            <u-navigation-menu 
+              :items="secondaryItems" 
+              orientation="vertical" 
+              :ui="{ link: 'p-2' }"
+            />
+          </template>
+        </div>
+      </template>
+    </u-modal>
+
+    <!-- Mobile Settings Modal -->
+    <u-modal v-model:open="isSettingsMenuOpen" class="md:hidden" title="Settings & Profile">
+      <template #body>
+        <div class="p-2 flex-1 flex flex-col gap-2">
+          <u-navigation-menu 
+            :items="[
+              { label: 'Account', icon: 'i-lucide-user', href: '/settings/account' },
+              { label: 'Settings', icon: 'i-lucide-cog', href: '/settings' },
+              { label: 'Logout', icon: 'i-lucide-log-out', href: '/logout' }
+            ]" 
+            orientation="vertical" 
+            :ui="{ link: 'p-2' }"
+          />
+        </div>
+      </template>
+    </u-modal>
+
+    <!-- Mobile Bottom Navigation -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-neutral-950/90 backdrop-blur-xl border-t border-default z-50 pb-[env(safe-area-inset-bottom)]">
+      <div class="flex justify-around items-center h-16 px-2">
+        <nuxt-link to="/" class="flex flex-col items-center justify-center w-full h-full text-muted hover:text-primary transition-colors" exact-active-class="!text-primary">
+          <u-icon name="i-lucide-house" class="w-6 h-6 mb-1" />
+          <span class="text-[10px] font-medium">Home</span>
+        </nuxt-link>
+        <button @click="isMobileMenuOpen = true" class="flex flex-col items-center justify-center w-full h-full text-muted hover:text-primary transition-colors" :class="isProjectContext ? '!text-primary' : ''">
+          <u-icon name="i-lucide-folder" class="w-6 h-6 mb-1" />
+          <span class="text-[10px] font-medium">Project</span>
+        </button>
+        <button @click="isSettingsMenuOpen = true" class="flex flex-col items-center justify-center w-full h-full text-muted hover:text-primary transition-colors" :class="route.path.startsWith('/settings') ? '!text-primary' : ''">
+          <u-icon name="i-lucide-settings" class="w-6 h-6 mb-1" />
+          <span class="text-[10px] font-medium">Settings</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
