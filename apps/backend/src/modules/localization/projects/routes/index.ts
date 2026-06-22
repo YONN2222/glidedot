@@ -89,13 +89,8 @@ export default async function projectRoutes(fastify: FastifyInstance) {
         return service.exportTranslations(parseInt(projectId), parseInt(languageId));
     });
 
-    // PUBLIC ENDPOINT
-    fastify.get('/:projectId/translations/:langCode', async (request, reply) => {
+    fastify.get('/:projectId/translations/:langCode', { preHandler: [checkProjectAccess] }, async (request, reply) => {
         const { projectId, langCode } = request.params as { projectId: string, langCode: string };
-        
-        // Ensure CORS headers are explicitly set for public consumption
-        reply.header('Access-Control-Allow-Origin', '*');
-        
         return service.exportTranslationsByCode(parseInt(projectId), langCode);
     });
 
