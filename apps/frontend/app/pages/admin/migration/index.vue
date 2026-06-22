@@ -293,6 +293,13 @@ const triggerS3Backup = async () => {
         >
           <template #project>
             <div class="flex flex-col gap-6 pt-4">
+              <div class="flex flex-col gap-1">
+                <h2 class="text-lg font-bold flex items-center gap-2">
+                  <u-icon name="i-lucide-file-json" class="w-5 h-5 text-primary-500" />
+                  Project Data
+                </h2>
+                <p class="text-sm text-neutral-400">Import or export JSON translations and formatting conventions for specific projects.</p>
+              </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <u-form-field label="Project">
                   <u-select
@@ -419,13 +426,13 @@ const triggerS3Backup = async () => {
                   <u-icon name="i-lucide-hard-drive-download" class="w-5 h-5 text-primary-500" />
                   Local System Backup
                 </h2>
-                <p class="text-sm text-neutral-400">Export or import a complete snapshot of your Glide instance (projects, languages, keys, translations).</p>
+                <p class="text-sm text-neutral-400">Export or import a complete snapshot of your Glide instance (projects, settings, conventions, and all translations, including those in review).</p>
               </div>
               
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="flex flex-col gap-2 p-4 rounded-xl border border-neutral-800 bg-neutral-900/30">
                   <h3 class="font-medium text-sm">Download Backup</h3>
-                  <p class="text-xs text-neutral-400 mb-2 flex-1">Download a ZIP file containing all projects, languages, labels, and translations.</p>
+                  <p class="text-xs text-neutral-400 mb-2 flex-1">Download a ZIP file containing the entire localization database and all related data.</p>
                   <u-button 
                     label="Download Backup ZIP" 
                     icon="i-lucide-download" 
@@ -467,19 +474,20 @@ const triggerS3Backup = async () => {
                   <u-icon name="i-lucide-cloud" class="w-5 h-5 text-primary-500" />
                   Cloud Backup
                 </h2>
-                <p class="text-sm text-neutral-400">Configure automated remote backups to an S3-compatible storage (AWS, MinIO, etc.).</p>
+                <p class="text-sm text-neutral-400">Configure automated remote backups of your entire localization database to an S3-compatible storage (AWS, MinIO, etc.).</p>
               </div>
             
-            <div class="relative">
-              <div v-if="!settings.s3Configured" class="absolute inset-0 z-20 backdrop-blur-[2px] bg-neutral-950/40 rounded-xl flex items-center justify-center">
-                <div class="bg-black/60 p-4 rounded-lg border border-neutral-800 text-center flex flex-col gap-2 max-w-sm">
-                  <u-icon name="i-lucide-cloud-off" class="w-8 h-8 text-neutral-400 mx-auto" />
-                  <span class="font-bold">S3 Not Configured</span>
-                  <span class="text-xs text-neutral-400">Please provide S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY, and S3_SECRET_KEY in your environment variables.</span>
-                </div>
-              </div>
+            <div class="flex flex-col gap-4">
+              <u-alert 
+                v-if="!settings.s3Configured" 
+                color="warning" 
+                variant="subtle" 
+                title="S3 Not Configured" 
+                description="Please provide S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY, and S3_SECRET_KEY in your environment variables." 
+                icon="i-lucide-cloud-off" 
+              />
               
-              <div class="grid grid-cols-2 gap-4 p-4 border border-neutral-800 rounded-xl bg-black/20" :class="{ 'opacity-50 pointer-events-none': !settings.s3Configured }">
+              <div class="grid grid-cols-2 gap-4 p-4 border border-neutral-800 rounded-xl" :class="{ 'opacity-50 pointer-events-none': !settings.s3Configured }">
                 <u-form-field label="Schedule Automatic Backups">
                   <div class="flex items-center gap-2 mt-2">
                     <u-switch v-model="s3BackupEnabled" />
