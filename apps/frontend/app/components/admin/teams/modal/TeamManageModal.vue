@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import type { Team, User, Project } from '@glidedot/types'
+import type { Team, User, Project } from '~/types'
 
 interface TeamMember {
   userId: number
@@ -83,8 +83,14 @@ const removeMappedGroup = (group: string) => {
 const getAvatarText = (username: string) => {
   return username ? username.substring(0, 2).toUpperCase() : 'U'
 }
-const getAvatarColor = (username: string) => {
-  return '#333333'
+const getAvatarColor = (name: string) => {
+  if (!name) return '#a1a1aa'
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const color = Math.floor(Math.abs((Math.sin(hash) * 10000) % 1 * 16777216)).toString(16)
+  return '#' + '000000'.substring(0, 6 - color.length) + color
 }
 </script>
 
@@ -130,6 +136,7 @@ const getAvatarColor = (username: string) => {
                   :text="!users?.find(u => u.id === member.userId)?.avatarUrl ? getAvatarText(member.username) : undefined"
                   :style="!users?.find(u => u.id === member.userId)?.avatarUrl ? { backgroundColor: getAvatarColor(member.username), color: '#171717' } : {}"
                   size="sm"
+                  :ui="{ rounded: 'rounded-full' }"
                 />
                 <span class="text-sm font-medium">{{ member.username }}</span>
                 <u-badge v-if="users?.find(u => u.id === member.userId)?.isOidc" color="neutral" variant="solid" size="xs">Managed by OIDC</u-badge>

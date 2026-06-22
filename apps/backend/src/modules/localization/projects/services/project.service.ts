@@ -1,7 +1,8 @@
 import { FastifyInstance } from 'fastify';
-import { projects, projectLanguages, languages, translations, translationKeys, activityLogs } from '../../schema';
+import { projects, projectLanguages, languages, translations, translationKeys, activityLogs, keyTemplates, keyGlossary, keyVariables } from '../../schema';
 import { eq, and, inArray, desc } from 'drizzle-orm';
-import { teamMembers, teamProjects, users, teams } from '../../../auth/schema';
+import { users } from '../../../users/schema';
+import { teamMembers, teamProjects, teams } from '../../../teams/schema';
 
 export class ProjectService {
     constructor(private db: FastifyInstance['db']) {}
@@ -19,7 +20,8 @@ export class ProjectService {
         const userProjects = await this.db.select({
             id: projects.id,
             name: projects.name,
-            sourceLanguageId: projects.sourceLanguageId
+            sourceLanguageId: projects.sourceLanguageId,
+            inContextUrl: projects.inContextUrl
         })
         .from(projects)
         .innerJoin(teamProjects, eq(projects.id, teamProjects.projectId))
@@ -49,7 +51,8 @@ export class ProjectService {
                 oidcLinkedProjects = await this.db.select({
                     id: projects.id,
                     name: projects.name,
-                    sourceLanguageId: projects.sourceLanguageId
+                    sourceLanguageId: projects.sourceLanguageId,
+                    inContextUrl: projects.inContextUrl
                 })
                 .from(projects)
                 .innerJoin(teamProjects, eq(projects.id, teamProjects.projectId))
@@ -73,7 +76,7 @@ export class ProjectService {
         return this.db.insert(projects).values(data).returning();
     }
 
-    async update(id: number, data: { name?: string; sourceLanguageId?: number; reviewEnabled?: boolean }) {
+    async update(id: number, data: { name?: string; sourceLanguageId?: number; reviewEnabled?: boolean; requireTemplate?: boolean; inContextUrl?: string | null }) {
         return this.db.update(projects).set(data).where(eq(projects.id, id)).returning();
     }
 
@@ -82,7 +85,14 @@ export class ProjectService {
     }
 
     async addLanguage(projectId: number, languageId: number) {
-        return this.db.insert(projectLanguages).values({ projectId, languageId }).returning();
+        const result = await this.db.insert(projectLanguages).values({ projectId, languageId }).returning();
+        
+        const [project] = await this.db.select().from(projects).where(eq(projects.id, projectId));
+        if (project && !project.sourceLanguageId) {
+            await this.setSourceLanguage(projectId, languageId);
+        }
+        
+        return result;
     }
 
     async setSourceLanguage(projectId: number, languageId: number) {
@@ -140,7 +150,13 @@ export class ProjectService {
         return result;
     }
 
-    async importTranslations(projectId: number, languageId: number, data: Record<string, string>) {
+    async exportTranslationsByCode(projectId: number, languageCode: string) {
+        const [lang] = await this.db.select().from(languages).where(eq(languages.code, languageCode));
+        if (!lang) return {};
+        return this.exportTranslations(projectId, lang.id);
+    }
+
+    async importTranslations(projectId: number, languageId: number, data: Record<string, string>, importAsPending: boolean = false) {
         const existingKeys = await this.db.select().from(translationKeys).where(eq(translationKeys.projectId, projectId));
         const keyMap = new Map(existingKeys.map(k => [k.key, k.id]));
 
@@ -153,14 +169,113 @@ export class ProjectService {
                 keyMap.set(keyName, keyId);
             }
             
+            const insertData = importAsPending 
+                ? { keyId, languageId, value: "", draftValue: value, reviewStatus: 'PENDING_REVIEW' as const }
+                : { keyId, languageId, value, draftValue: null, reviewStatus: null };
+
             await this.db.insert(translations)
-                .values({ keyId, languageId, value })
+                .values(insertData)
                 .onConflictDoUpdate({
                     target: [translations.keyId, translations.languageId],
-                    set: { value }
+                    set: insertData
                 });
         }
         return { success: true, imported: Object.keys(data).length };
+    }
+
+    async getTemplates(projectId: number) {
+        return this.db.select().from(keyTemplates).where(eq(keyTemplates.projectId, projectId));
+    }
+
+    async createTemplate(projectId: number, data: { name: string, segments: string }) {
+        return this.db.insert(keyTemplates).values({ projectId, ...data }).returning();
+    }
+
+    async updateTemplate(id: number, data: { name?: string, segments?: string }) {
+        return this.db.update(keyTemplates).set(data).where(eq(keyTemplates.id, id)).returning();
+    }
+
+    async deleteTemplate(id: number) {
+        return this.db.delete(keyTemplates).where(eq(keyTemplates.id, id));
+    }
+
+    async getGlossary(projectId: number) {
+        return this.db.select().from(keyGlossary).where(eq(keyGlossary.projectId, projectId));
+    }
+
+    async createGlossaryTerm(projectId: number, data: { badWord: string, goodWord: string }) {
+        return this.db.insert(keyGlossary).values({ projectId, ...data }).returning();
+    }
+
+    async updateGlossaryTerm(id: number, data: { badWord?: string, goodWord?: string }) {
+        return this.db.update(keyGlossary).set(data).where(eq(keyGlossary.id, id)).returning();
+    }
+
+    async deleteGlossaryTerm(id: number) {
+        return this.db.delete(keyGlossary).where(eq(keyGlossary.id, id));
+    }
+
+    // --- Key Variables (Shared Enums) ---
+    async getVariables(projectId: number) {
+        return this.db.select().from(keyVariables).where(eq(keyVariables.projectId, projectId));
+    }
+
+    async createVariable(projectId: number, data: { name: string, options: string }) {
+        return this.db.insert(keyVariables).values({ projectId, ...data }).returning();
+    }
+
+    async updateVariable(id: number, data: { name?: string, options?: string }) {
+        return this.db.update(keyVariables).set(data).where(eq(keyVariables.id, id)).returning();
+    }
+
+    async deleteVariable(id: number) {
+        return this.db.delete(keyVariables).where(eq(keyVariables.id, id));
+    }
+
+    async exportConventions(projectId: number) {
+        const [templates, glossary, variables] = await Promise.all([
+            this.db.select().from(keyTemplates).where(eq(keyTemplates.projectId, projectId)),
+            this.db.select().from(keyGlossary).where(eq(keyGlossary.projectId, projectId)),
+            this.db.select().from(keyVariables).where(eq(keyVariables.projectId, projectId))
+        ]);
+
+        return {
+            templates: templates.map(t => ({ name: t.name, segments: t.segments })),
+            glossary: glossary.map(g => ({ badWord: g.badWord, goodWord: g.goodWord })),
+            variables: variables.map(v => ({ name: v.name, options: v.options }))
+        };
+    }
+
+    async importConventions(projectId: number, data: { templates?: { name: string, segments: string }[], glossary?: { badWord: string, goodWord: string }[], variables?: { name: string, options: string }[] }) {
+        if (data.templates && data.templates.length > 0) {
+            for (const t of data.templates) {
+                // Delete existing with same name if exists, then insert
+                const existing = await this.db.select().from(keyTemplates).where(and(eq(keyTemplates.projectId, projectId), eq(keyTemplates.name, t.name)));
+                if (existing.length > 0) {
+                    await this.db.delete(keyTemplates).where(eq(keyTemplates.id, existing[0].id));
+                }
+                await this.db.insert(keyTemplates).values({ projectId, name: t.name, segments: t.segments });
+            }
+        }
+        if (data.glossary && data.glossary.length > 0) {
+            for (const g of data.glossary) {
+                await this.db.insert(keyGlossary).values({ projectId, badWord: g.badWord, goodWord: g.goodWord })
+                    .onConflictDoUpdate({
+                        target: [keyGlossary.projectId, keyGlossary.badWord],
+                        set: { goodWord: g.goodWord }
+                    });
+            }
+        }
+        if (data.variables && data.variables.length > 0) {
+            for (const v of data.variables) {
+                await this.db.insert(keyVariables).values({ projectId, name: v.name, options: v.options })
+                    .onConflictDoUpdate({
+                        target: [keyVariables.projectId, keyVariables.name],
+                        set: { options: v.options }
+                    });
+            }
+        }
+        return { success: true };
     }
 
     async getDashboardStats(user: { id: number; isAdmin: boolean }) {
@@ -206,19 +321,71 @@ export class ProjectService {
                 keysCount: pKeys.length,
                 languagesCount: pLangs.length,
                 translationsCount: pTrans.length,
-                progress
+                progress,
+                lastActivity: null as Date | null
             };
         });
+
+        const logs = await this.db.select({
+            projectId: activityLogs.projectId,
+            createdAt: activityLogs.createdAt
+        }).from(activityLogs).where(inArray(activityLogs.projectId, projectIds));
+
+        const projectLastActivity = new Map<number, Date>();
+        logs.forEach(log => {
+            if (!log.projectId) return;
+            const date = new Date(log.createdAt);
+            const existing = projectLastActivity.get(log.projectId);
+            if (!existing || date > existing) {
+                projectLastActivity.set(log.projectId, date);
+            }
+        });
+
+        projectStats.forEach(p => {
+            p.lastActivity = projectLastActivity.get(p.id) || null;
+        });
+
+        const recentProjects = [...projectStats]
+            .filter(p => p.lastActivity)
+            .sort((a, b) => b.lastActivity!.getTime() - a.lastActivity!.getTime())
+            .slice(0, 3);
 
         const overallProgress = expectedTranslations === 0 ? 0 : Math.floor((totalTranslations / expectedTranslations) * 100);
 
         // Fetch personal stats for the current user
-        const personalLogs = await this.db.select({ action: activityLogs.action }).from(activityLogs).where(eq(activityLogs.userId, user.id));
+        const personalLogs = await this.db.select({ 
+            action: activityLogs.action,
+            createdAt: activityLogs.createdAt
+        }).from(activityLogs).where(eq(activityLogs.userId, user.id));
+
+        const now = new Date();
+        const lastDays = new Map<string, number>();
+        for (let i = 167; i >= 0; i--) {
+            const d = new Date(now);
+            d.setDate(d.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            lastDays.set(dateStr, 0);
+        }
+
+        personalLogs.forEach(log => {
+            const d = new Date(log.createdAt);
+            const iso = d.toISOString().split('T')[0];
+            if (lastDays.has(iso)) {
+                lastDays.set(iso, lastDays.get(iso)! + 1);
+            }
+        });
+        
+        const activityHeatmap: { date: string; count: number }[] = [];
+        lastDays.forEach((count, date) => {
+            activityHeatmap.push({ date, count });
+        });
+
         const personalStats = {
             keysCreated: personalLogs.filter(l => l.action === 'KEY_CREATED').length,
             translationsUpdated: personalLogs.filter(l => l.action === 'TRANSLATION_UPDATED').length,
             languagesAdded: personalLogs.filter(l => l.action === 'LANGUAGE_ADDED').length,
             labelsCreated: personalLogs.filter(l => l.action === 'LABEL_CREATED').length,
+            activityHeatmap
         };
 
         return {
@@ -230,6 +397,7 @@ export class ProjectService {
                 overallProgress
             },
             projects: projectStats,
+            recentProjects,
             personalStats
         };
     }

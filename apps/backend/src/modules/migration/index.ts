@@ -4,7 +4,8 @@ import { S3BackupService } from './s3-backup.service';
 
 import { 
     projects, languages, projectLanguages, labels, 
-    translationKeys, translations, keysToLabels, activityLogs
+    translationKeys, translations, keysToLabels, activityLogs,
+    keyTemplates, keyGlossary, keyVariables
 } from '../localization/schema';
 
 // Helper function to insert in chunks to avoid SQLite 'too many SQL variables' error
@@ -25,6 +26,10 @@ const migrationModule: FastifyPluginAsync = async (fastify, opts) => {
             const allTranslationKeys = await fastify.db.select().from(translationKeys);
             const allTranslations = await fastify.db.select().from(translations);
             const allKeysToLabels = await fastify.db.select().from(keysToLabels);
+            const allActivityLogs = await fastify.db.select().from(activityLogs);
+            const allKeyTemplates = await fastify.db.select().from(keyTemplates);
+            const allKeyGlossary = await fastify.db.select().from(keyGlossary);
+            const allKeyVariables = await fastify.db.select().from(keyVariables);
 
             const backupData = {
                 projects: allProjects,
@@ -34,6 +39,10 @@ const migrationModule: FastifyPluginAsync = async (fastify, opts) => {
                 translationKeys: allTranslationKeys,
                 translations: allTranslations,
                 keysToLabels: allKeysToLabels,
+                activityLogs: allActivityLogs,
+                keyTemplates: allKeyTemplates,
+                keyGlossary: allKeyGlossary,
+                keyVariables: allKeyVariables,
             };
 
             const zip = new AdmZip();
@@ -71,12 +80,16 @@ const migrationModule: FastifyPluginAsync = async (fastify, opts) => {
 
             // Import data
             await fastify.db.transaction(async (tx) => {
-                // Delete everything safely
+                // Delete everything safely (child tables first)
                 await tx.delete(keysToLabels);
                 await tx.delete(translations);
                 await tx.delete(translationKeys);
                 await tx.delete(labels);
                 await tx.delete(projectLanguages);
+                await tx.delete(activityLogs);
+                await tx.delete(keyTemplates);
+                await tx.delete(keyGlossary);
+                await tx.delete(keyVariables);
                 await tx.delete(projects);
                 await tx.delete(languages);
 
@@ -101,6 +114,18 @@ const migrationModule: FastifyPluginAsync = async (fastify, opts) => {
                 }
                 if (backupData.keysToLabels && backupData.keysToLabels.length > 0) {
                     await insertInChunks(tx, keysToLabels, backupData.keysToLabels);
+                }
+                if (backupData.activityLogs && backupData.activityLogs.length > 0) {
+                    await insertInChunks(tx, activityLogs, backupData.activityLogs);
+                }
+                if (backupData.keyTemplates && backupData.keyTemplates.length > 0) {
+                    await insertInChunks(tx, keyTemplates, backupData.keyTemplates);
+                }
+                if (backupData.keyGlossary && backupData.keyGlossary.length > 0) {
+                    await insertInChunks(tx, keyGlossary, backupData.keyGlossary);
+                }
+                if (backupData.keyVariables && backupData.keyVariables.length > 0) {
+                    await insertInChunks(tx, keyVariables, backupData.keyVariables);
                 }
             });
 

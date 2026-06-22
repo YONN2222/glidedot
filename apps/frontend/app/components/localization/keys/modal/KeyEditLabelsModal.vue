@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { TranslationLabel } from '@glidedot/types'
+import type { TranslationLabel } from '~/types'
 
 const props = defineProps<{
   modelValue: boolean

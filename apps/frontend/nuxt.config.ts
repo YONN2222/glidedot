@@ -24,6 +24,13 @@ export default defineNuxtConfig({
       '@comark/nuxt',
       '@vite-pwa/nuxt'
     ],
+    icon: {
+      provider: 'server',
+      fallbackToApi: false,
+      serverBundle: {
+        collections: ['lucide']
+      }
+    },
     pwa: {
         registerType: 'autoUpdate',
         manifest: {
@@ -55,12 +62,12 @@ export default defineNuxtConfig({
         defaultProvider: 'oidc',
         providers: {
             oidc: {
-                clientId: process.env.NUXT_OIDC_CLIENT_ID || '',
-                clientSecret: process.env.NUXT_OIDC_CLIENT_SECRET || '',
-                authorizationUrl: process.env.NUXT_OIDC_AUTHORIZATION_URL || '',
-                tokenUrl: process.env.NUXT_OIDC_TOKEN_URL || '',
-                userInfoUrl: process.env.NUXT_OIDC_USERINFO_URL || '',
-                redirectUri: process.env.NUXT_OIDC_REDIRECT_URI || '',
+                clientId: '',
+                clientSecret: '',
+                authorizationUrl: '',
+                tokenUrl: '',
+                userInfoUrl: '',
+                redirectUri: '',
                 tokenRequestType: 'form-urlencoded',
                 scope: ['openid', 'email', 'profile', 'groups'],
                 validateAccessToken: false,
@@ -75,6 +82,12 @@ export default defineNuxtConfig({
     vite: {
         server: {
             allowedHosts: true
+        }
+    },
+    nitro: {
+        preset: 'bun',
+        externals: {
+            traceInclude: ['ofetch']
         }
     }
 })

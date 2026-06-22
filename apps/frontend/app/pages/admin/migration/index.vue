@@ -28,6 +28,11 @@ const selectedLanguageId = ref<number | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const isImporting = ref(false)
 const isExporting = ref(false)
+const importAsPending = ref(false)
+
+const conventionsFileInput = ref<HTMLInputElement | null>(null)
+const isImportingConventions = ref(false)
+const isExportingConventions = ref(false)
 
 const backupFileInput = ref<HTMLInputElement | null>(null)
 const isBackingUp = ref(false)
@@ -109,7 +114,7 @@ const handleFileSelect = async (event: Event) => {
     
     const result = await fetchApi(`/localization/projects/${selectedProjectId.value}/languages/${selectedLanguageId.value}/import`, {
       method: 'POST',
-      body: jsonData
+      body: { data: jsonData, importAsPending: importAsPending.value }
     })
 
     toast.add({ title: `Import successful (${result.imported} keys imported)`, color: 'success' })
@@ -124,6 +129,64 @@ const handleFileSelect = async (event: Event) => {
 
 const triggerFileInput = () => {
   fileInput.value?.click()
+}
+
+const exportConventions = async () => {
+  if (!selectedProjectId.value) return
+  isExportingConventions.value = true
+  try {
+    const data = await fetchApi(`/localization/projects/${selectedProjectId.value}/conventions/export`)
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    
+    const project = projects.value.find(p => p.id === selectedProjectId.value)
+    a.download = `glide_conventions_${project?.name?.toLowerCase() || selectedProjectId.value}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    toast.add({ title: 'Export successful', color: 'success' })
+  } catch {
+    toast.add({ title: 'Failed to export conventions', color: 'error' })
+  } finally {
+    isExportingConventions.value = false
+  }
+}
+
+const handleConventionsFileSelect = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  if (!selectedProjectId.value) {
+    toast.add({ title: 'Please select a project first', color: 'error' })
+    return
+  }
+
+  isImportingConventions.value = true
+  try {
+    const text = await file.text()
+    const jsonData = JSON.parse(text)
+    
+    await fetchApi(`/localization/projects/${selectedProjectId.value}/conventions/import`, {
+      method: 'POST',
+      body: jsonData
+    })
+
+    toast.add({ title: 'Conventions imported successfully', color: 'success' })
+  } catch (e) {
+    console.error(e)
+    toast.add({ title: 'Failed to parse or import JSON', color: 'error' })
+  } finally {
+    isImportingConventions.value = false
+    if (conventionsFileInput.value) conventionsFileInput.value.value = ''
+  }
+}
+
+const triggerConventionsFileInput = () => {
+  conventionsFileInput.value?.click()
 }
 
 const downloadBackup = async () => {
@@ -157,6 +220,13 @@ const handleBackupSelect = async (event: Event) => {
   isRestoring.value = true
   isRestoreModalOpen.value = false
   
+  toast.add({ 
+    title: 'Restore in progress...', 
+    description: 'This may take a few minutes until all changes are loaded. Please wait.', 
+    color: 'info',
+    duration: 10000
+  })
+  
   try {
     const formData = new FormData()
     formData.append('file', file)
@@ -167,7 +237,11 @@ const handleBackupSelect = async (event: Event) => {
     })
 
     toast.add({ title: 'Backup restored successfully', color: 'success' })
-    loadProjects()
+    
+    // Delay reload so the user can see the success toast
+    setTimeout(() => {
+      window.location.href = '/'
+    }, 2000)
   } catch (e) {
     console.error(e)
     toast.add({ title: 'Failed to restore backup', color: 'error' })
@@ -206,71 +280,147 @@ const triggerS3Backup = async () => {
       <div class="flex flex-col gap-4">
         <div>
           <h1 class="text-xl font-bold">Migration</h1>
-          <p class="text-sm text-neutral-400">Migrate your data from systems like Traduora or export your translations.</p>
+          <p class="text-sm text-neutral-400">Migrate from systems like Traduora or manage your glide data.</p>
         </div>
-        <u-card class="flex flex-col h-full" :ui="{ body: { base: 'flex-1 flex flex-col' } }">
-        <div class="flex flex-col gap-6">
-        <div class="grid grid-cols-2 gap-4">
-          <u-form-field label="Project">
-            <u-select
-              v-model="selectedProjectId"
-              :items="projects.map(p => ({ label: p.name, value: p.id }))"
-              placeholder="Select project"
-              class="w-full"
-            />
-          </u-form-field>
+        <u-card class="flex flex-col h-full">
+        <u-tabs 
+          :items="[{ label: 'Translations', slot: 'translations', icon: 'i-lucide-languages' }, { label: 'Conventions', slot: 'conventions', icon: 'i-lucide-book-dashed' }]"
+          class="w-full"
+        >
+          <template #translations>
+            <div class="flex flex-col gap-6 pt-4">
+              <div class="grid grid-cols-2 gap-4">
+                <u-form-field label="Project">
+                  <u-select
+                    v-model="selectedProjectId"
+                    :items="projects.map(p => ({ label: p.name, value: p.id }))"
+                    placeholder="Select project"
+                    class="w-full"
+                  />
+                </u-form-field>
 
-          <u-form-field label="Language">
-            <u-select
-              v-model="selectedLanguageId"
-              :items="languages.map(l => ({ label: l.name, value: l.id }))"
-              placeholder="Select language"
-              :disabled="!selectedProjectId"
-              class="w-full"
-            />
-          </u-form-field>
-        </div>
+                <u-form-field label="Language">
+                  <u-select
+                    v-model="selectedLanguageId"
+                    :items="languages.map(l => ({ label: l.name, value: l.id }))"
+                    placeholder="Select language"
+                    :disabled="!selectedProjectId"
+                    class="w-full"
+                  />
+                </u-form-field>
+              </div>
 
-        <u-separator />
+              <u-separator />
 
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex flex-col gap-2">
-            <h3 class="font-medium text-sm">Export Translations</h3>
-            <p class="text-xs text-neutral-400 mb-2">Download a flat JSON file containing all translations for the selected project and language.</p>
-            <u-button 
-              label="Export to JSON" 
-              icon="i-lucide-download" 
-              color="primary" 
-              variant="subtle"
-              :disabled="!selectedLanguageId"
-              :loading="isExporting"
-              class="justify-center"
-              @click="exportData"
-            />
-          </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-2">
+                  <h3 class="font-medium text-sm">Export Translations</h3>
+                  <p class="text-xs text-neutral-400 mb-2">Download a flat JSON file containing all translations for the selected project and language.</p>
+                  <u-button 
+                    label="Export to JSON" 
+                    icon="i-lucide-download" 
+                    color="primary" 
+                    variant="subtle"
+                    :disabled="!selectedLanguageId"
+                    :loading="isExporting"
+                    class="justify-center"
+                    @click="exportData"
+                  />
+                </div>
 
-          <div class="flex flex-col gap-2">
-            <h3 class="font-medium text-sm">Import Translations</h3>
-            <p class="text-xs text-neutral-400 mb-2">Upload a flat JSON file (e.g. from Traduora) to import translations. Existing keys will be updated.</p>
-            <input 
-              ref="fileInput" 
-              type="file" 
-              accept=".json" 
-              class="hidden" 
-              @change="handleFileSelect"
-            >
-            <u-button 
-              label="Import from JSON" 
-              icon="i-lucide-upload" 
-              color="primary" 
-              :disabled="!selectedLanguageId"
-              :loading="isImporting"
-              class="justify-center"
-              @click="triggerFileInput"
-            />
-          </div>
-          </div>
-        </div>
+                <div class="flex flex-col gap-2">
+                  <h3 class="font-medium text-sm">Import Translations</h3>
+                  <p class="text-xs text-neutral-400 mb-2">Upload a flat JSON file (e.g. from Traduora) to import translations. Existing keys will be updated.</p>
+                  <input 
+                    ref="fileInput" 
+                    type="file" 
+                    accept=".json" 
+                    class="hidden" 
+                    @change="handleFileSelect"
+                  >
+                  <u-form-field class="mb-2">
+                    <div class="flex items-center gap-2">
+                      <u-checkbox v-model="importAsPending" />
+                      <span class="text-xs font-medium">Import as pending review</span>
+                    </div>
+                  </u-form-field>
+                  <u-button 
+                    label="Import from JSON" 
+                    icon="i-lucide-upload" 
+                    color="primary" 
+                    :disabled="!selectedLanguageId"
+                    :loading="isImporting"
+                    class="justify-center"
+                    @click="triggerFileInput"
+                  />
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <template #conventions>
+            <div class="flex flex-col gap-6 pt-4">
+              <div class="grid grid-cols-2 gap-4">
+                <u-form-field label="Project">
+                  <u-select
+                    v-model="selectedProjectId"
+                    :items="projects.map(p => ({ label: p.name, value: p.id }))"
+                    placeholder="Select project"
+                    class="w-full"
+                  />
+                </u-form-field>
+
+                <u-form-field label="Language">
+                  <u-select
+                    disabled
+                    placeholder="Not required for conventions"
+                    class="w-full opacity-50"
+                  />
+                </u-form-field>
+              </div>
+
+              <u-separator />
+
+              <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-2">
+                  <h3 class="font-medium text-sm">Export Conventions</h3>
+                  <p class="text-xs text-neutral-400 mb-2">Download a JSON file containing key templates, variables, and glossary terms.</p>
+                  <u-button 
+                    label="Export Conventions" 
+                    icon="i-lucide-download" 
+                    color="primary" 
+                    variant="subtle"
+                    :disabled="!selectedProjectId"
+                    :loading="isExportingConventions"
+                    class="justify-center"
+                    @click="exportConventions"
+                  />
+                </div>
+
+                <div class="flex flex-col gap-2">
+                  <h3 class="font-medium text-sm">Import Conventions</h3>
+                  <p class="text-xs text-neutral-400 mb-2">Upload a JSON file to import key templates, variables, and glossary terms.</p>
+                  <input 
+                    ref="conventionsFileInput" 
+                    type="file" 
+                    accept=".json" 
+                    class="hidden" 
+                    @change="handleConventionsFileSelect"
+                  >
+                  <u-button 
+                    label="Import Conventions" 
+                    icon="i-lucide-upload" 
+                    color="primary" 
+                    :disabled="!selectedProjectId"
+                    :loading="isImportingConventions"
+                    class="justify-center"
+                    @click="triggerConventionsFileInput"
+                  />
+                </div>
+              </div>
+            </div>
+          </template>
+        </u-tabs>
         </u-card>
       </div>
 

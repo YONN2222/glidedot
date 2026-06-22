@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
-import { systemSettings, users } from '../schema';
+import { users } from '../../users/schema';
+import { systemSettings } from '../../settings/schema';
 import { projects, languages } from '../../localization/schema';
 import { eq } from 'drizzle-orm';
 import { UserService } from './user.service';

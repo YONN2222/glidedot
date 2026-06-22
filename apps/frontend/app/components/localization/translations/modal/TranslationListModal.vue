@@ -3,7 +3,7 @@ import { computed, ref, reactive } from 'vue'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import type { TableColumn } from '@nuxt/ui'
 import { useTranslation } from '~/composables/localization/useTranslation'
-import type { Language } from '@glidedot/types'
+import type { Language } from '~/types'
 
 interface TranslationRow {
   keyId: number

@@ -20,7 +20,14 @@ const isOpen = computed({
 <template>
   <u-modal v-model:open="isOpen" title="Restore System Backup">
     <template #body>
-      <div class="p-4 flex flex-col gap-3">
+      <div class="p-4 flex flex-col gap-4">
+        <u-alert 
+          title="Important" 
+          description="It may take a few minutes until all changes are fully loaded and applied. Please do not close the page during this process." 
+          color="warning" 
+          variant="subtle" 
+          icon="i-lucide-clock" 
+        />
         <p class="text-sm text-neutral-400">
           Are you sure you want to restore the system backup? This will completely wipe your current database (Projects, Languages, Labels, and Translations) and replace it with the data from the uploaded backup file. This action cannot be undone.
         </p>

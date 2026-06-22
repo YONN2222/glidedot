@@ -12,6 +12,9 @@ const { login: oidcLogin } = useOidcAuth()
 const config = useRuntimeConfig()
 const isOidcEnabled = computed(() => config.public.oidcEnabled)
 
+const { settings, loadSettings } = useSettings()
+await loadSettings()
+
 const login = async () => {
   error.value = false
   const success = await authLogin(accesskey.value, password.value)
@@ -29,7 +32,16 @@ const focusPassword = () => {
 
 <template>
   <div class="min-h-svh flex flex-col justify-center items-center space-y-4">
-    <nuxt-img src="/img/logo.png" class="w-18 h-auto"/>
+    <div class="flex items-center justify-center mb-4 mt-8">
+      <div class="text-5xl font-black tracking-tighter text-white font-sans flex items-baseline">
+        <template v-if="settings.logoType === 'image'">
+          <img :src="settings.logoUrlMinimal || settings.logoUrl" alt="Logo" class="h-14 w-auto max-w-[200px] object-contain shrink-0" >
+        </template>
+        <template v-else>
+          {{ settings.logoText || 'glide' }}<span v-if="settings.logoShowDot !== 'false'" class="text-primary-500">.</span>
+        </template>
+      </div>
+    </div>
 
     <div class="flex flex-col items-center border border-accented rounded-lg p-4 w-100 h-auto pb-8">
 
@@ -38,16 +50,13 @@ const focusPassword = () => {
         <p>Login with your Accesskey<span v-if="isOidcEnabled"> or OIDC</span></p>
       </div>
 
-      <div class="flex flex-col mt-6 relative" :class="{'opacity-50 blur-[2px] pointer-events-none select-none': !isOidcEnabled}">
+      <div v-if="isOidcEnabled" class="flex flex-col mt-6 relative">
         <u-button variant="subtle" color="neutral" class="w-80 h-10 justify-center" @click="oidcLogin('oidc')">
           <div class="flex flex-row items-center space-x-2">
             <u-icon name="i-lucide-fingerprint" class="size-4"/>
             <p class="text-base">Login with OIDC</p>
           </div>
         </u-button>
-        <div v-if="!isOidcEnabled" class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <u-badge color="warning" variant="solid" size="sm">OIDC Disabled</u-badge>
-        </div>
       </div>
 
       <u-separator :label="isOidcEnabled ? 'or login with' : ''" class="py-6"

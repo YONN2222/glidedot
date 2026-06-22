@@ -1,7 +1,5 @@
 import type { Project } from "~/types/project"
-
 import { unref } from 'vue'
-
 import type { Ref } from 'vue'
 
 export const useProject = (projectsRef: Ref<Project[]> | Project[]) => {

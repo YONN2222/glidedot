@@ -19,7 +19,7 @@ export class KeyService {
 
         if (keyIds.length === 0) return [];
 
-        const { users } = await import('../../../auth/schema');
+        const { users } = await import('../../../users/schema');
         const allTranslations = await this.db.select({
             id: translations.id,
             keyId: translations.keyId,
@@ -62,6 +62,13 @@ export class KeyService {
         }
 
         return newKey;
+    }
+
+    async updateKey(projectId: number, keyId: number, newKeyName: string) {
+        return this.db.update(translationKeys)
+            .set({ key: newKeyName })
+            .where(and(eq(translationKeys.id, keyId), eq(translationKeys.projectId, projectId)))
+            .returning();
     }
 
     async deleteKey(projectId: number, keyId: number) {
@@ -108,7 +115,7 @@ export class KeyService {
     }
 
     async upsertTranslation(projectId: number, keyId: number, languageId: number, value: string, userId: number) {
-        const { users } = await import('../../../auth/schema');
+        const { users } = await import('../../../users/schema');
         const { projects, translations } = await import('../../schema');
         const [user] = await this.db.select().from(users).where(eq(users.id, userId));
         const [project] = await this.db.select().from(projects).where(eq(projects.id, projectId));
@@ -141,7 +148,7 @@ export class KeyService {
 
     async checkAndDecrementQuota(userId?: number, count: number = 1): Promise<number | null> {
         if (!userId) return null;
-        const { users } = await import('../../../auth/schema');
+        const { users } = await import('../../../users/schema');
         const [user] = await this.db.select().from(users).where(eq(users.id, userId));
         if (!user) return null;
         if (!user.allowSuggestions) throw new Error('Translation suggestions are disabled for this user');

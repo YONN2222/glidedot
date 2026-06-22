@@ -7,6 +7,8 @@ export const projects = sqliteTable('projects', {
     name: text('name').notNull().unique(),
     sourceLanguageId: integer('source_language_id').references(() => languages.id),
     reviewEnabled: integer('review_enabled', { mode: 'boolean' }).notNull().default(false),
+    requireTemplate: integer('require_template', { mode: 'boolean' }).notNull().default(false),
+    inContextUrl: text('in_context_url'),
 });
 
 // Languages Table
@@ -74,3 +76,31 @@ export const activityLogs = sqliteTable('activity_logs', {
     details: text('details').notNull(),
     createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+// Key Templates Table
+export const keyTemplates = sqliteTable('key_templates', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    projectId: integer('project_id').notNull().references(() => projects.id),
+    name: text('name').notNull(),
+    segments: text('segments').notNull(), // JSON string
+});
+
+// Key Glossary Table
+export const keyGlossary = sqliteTable('key_glossary', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    projectId: integer('project_id').notNull().references(() => projects.id),
+    badWord: text('bad_word').notNull(),
+    goodWord: text('good_word').notNull(),
+}, (table) => ({
+    glossaryIdx: uniqueIndex('glossary_project_idx').on(table.projectId, table.badWord),
+}));
+
+// Key Variables Table (for Shared Enums)
+export const keyVariables = sqliteTable('key_variables', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    projectId: integer('project_id').notNull().references(() => projects.id),
+    name: text('name').notNull(),
+    options: text('options').notNull(), // JSON string array or comma separated
+}, (table) => ({
+    variableIdx: uniqueIndex('variable_project_idx').on(table.projectId, table.name),
+}));

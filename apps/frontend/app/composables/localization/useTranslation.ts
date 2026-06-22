@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import type { TranslationKey, TranslationKeyScopeNode, Language } from '@glidedot/types'
+import type { TranslationKey, TranslationKeyScopeNode, Language } from '~/types'
 import { useApi } from '~/composables/useApi'
 
 // --- SHARED GLOBAL STATE ---
@@ -35,13 +35,21 @@ export function useTranslation() {
                 fetchApi(`/localization/labels/${projectId.value}`)
             ])
 
-            languages.value = (langsData as { id: number; code: string; name: string; flag?: string; isSource?: boolean }[]).map(l => ({
+            const mappedLangs = (langsData as { id: number; code: string; name: string; flag?: string; isSource?: boolean }[]).map(l => ({
                 id: l.id,
                 code: l.code,
                 name: l.name,
                 flag: l.flag || '🏳️',
                 isRef: l.isSource 
             }))
+
+            mappedLangs.sort((a, b) => {
+                if (a.isRef && !b.isRef) return -1
+                if (!a.isRef && b.isRef) return 1
+                return a.name.localeCompare(b.name)
+            })
+
+            languages.value = mappedLangs
             
             labels.value = (labelsData as { id: number; name: string; color: string }[]).map(l => ({
                 id: l.id,
@@ -272,6 +280,17 @@ export function useTranslation() {
         }
     }
 
+    const updateKey = async (keyId: number, keyName: string) => {
+        if (!projectId.value) return
+        try {
+            await fetchApi(`/localization/keys/${projectId.value}/${keyId}`, { method: 'PATCH', body: { key: keyName } })
+            toast.add({ title: 'Key updated successfully', color: 'success' })
+            await init()
+        } catch {
+            toast.add({ title: 'Failed to update key', color: 'error' })
+        }
+    }
+
     const deleteKey = async (keyId: number) => {
         if (!projectId.value) return
         try {
@@ -458,6 +477,7 @@ export function useTranslation() {
         autoTranslate,
         suggestTranslation,
         addKey,
+        updateKey,
         deleteKey,
         bulkDeleteKeys,
         addLabelToKey,

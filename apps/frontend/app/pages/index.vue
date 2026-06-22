@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 
 definePageMeta({
   layout: 'default'
@@ -24,12 +24,23 @@ interface DashboardStats {
     languagesCount: number
     translationsCount: number
     progress: number
+    lastActivity?: string | null
+  }[]
+  recentProjects?: {
+    id: number
+    name: string
+    keysCount: number
+    languagesCount: number
+    translationsCount: number
+    progress: number
+    lastActivity?: string | null
   }[]
   personalStats?: {
     keysCreated: number
     translationsUpdated: number
     languagesAdded: number
     labelsCreated: number
+    activityHeatmap?: { date: string; count: number }[]
   }
 }
 
@@ -46,6 +57,22 @@ const loadStats = async (silent = false) => {
   } finally {
     isLoading.value = false
   }
+}
+
+const tooltipData = ref({ visible: false, x: 0, y: 0, count: 0, date: '' })
+
+const showTooltip = (event: MouseEvent, day: { count: number, date: string }) => {
+  tooltipData.value = {
+    visible: true,
+    x: event.clientX,
+    y: event.clientY - 15,
+    count: day.count,
+    date: new Date(day.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+  }
+}
+
+const hideTooltip = () => {
+  tooltipData.value.visible = false
 }
 
 
@@ -69,7 +96,7 @@ onUnmounted(() => {
   <div class="flex flex-col gap-8 max-w-7xl mx-auto py-4">
     <!-- Header -->
     <div class="flex flex-col gap-1">
-      <h1 class="text-2xl font-bold">Welcome back, {{ user?.username || 'User' }}! 👋</h1>
+      <h1 class="text-2xl font-bold">Welcome back, {{ user?.username || 'User' }}!</h1>
       <p class="text-sm text-neutral-400">Here's a quick overview of your localization progress.</p>
     </div>
 
@@ -78,112 +105,128 @@ onUnmounted(() => {
     </div>
 
     <template v-else-if="stats">
-      <!-- Welcome Message & Personal Contributions -->
-      <div class="flex flex-col gap-6 p-5 md:p-8 rounded-xl md:rounded-2xl bg-gradient-to-br from-primary-500/10 via-[#121212] to-[#121212] border border-primary-500/20 mb-4 shadow-lg shadow-primary-500/5 relative overflow-hidden">
-        <div class="absolute -top-24 -right-24 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl pointer-events-none"/>
+      <!-- Personal Contributions Metrics -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2 mt-2">
+        <!-- Translations -->
+        <u-card>
+          <div class="flex flex-col">
+            <span class="text-sm font-medium text-neutral-400 mb-2 flex items-center gap-2">
+              <u-icon name="i-lucide-a-large-small" class="w-4 h-4" />
+              Translations
+            </span>
+            <span class="text-3xl font-bold text-white">{{ stats.personalStats?.translationsUpdated || 0 }}</span>
+          </div>
+        </u-card>
         
-        <div class="flex flex-col gap-2 z-10">
-          <h2 class="text-2xl md:text-3xl font-bold text-white tracking-tight">Your Contributions</h2>
-          <p class="text-neutral-400 max-w-xl text-sm leading-relaxed">Here is an overview of everything you've accomplished so far. Keep up the great work!</p>
-        </div>
-
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2 z-10">
-          <!-- Translations -->
-          <div class="flex flex-col p-4 rounded-xl bg-black/40 border border-white/5 backdrop-blur-sm">
-            <span class="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1">Translations</span>
-            <span class="text-3xl font-black text-white">{{ stats.personalStats?.translationsUpdated || 0 }}</span>
+        <!-- Keys -->
+        <u-card>
+          <div class="flex flex-col">
+            <span class="text-sm font-medium text-neutral-400 mb-2 flex items-center gap-2">
+              <u-icon name="i-lucide-logs" class="w-4 h-4" />
+              Keys Created
+            </span>
+            <span class="text-3xl font-bold text-white">{{ stats.personalStats?.keysCreated || 0 }}</span>
           </div>
-          <!-- Keys -->
-          <div class="flex flex-col p-4 rounded-xl bg-black/40 border border-white/5 backdrop-blur-sm">
-            <span class="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1">Keys Created</span>
-            <span class="text-3xl font-black text-white">{{ stats.personalStats?.keysCreated || 0 }}</span>
+        </u-card>
+        
+        <!-- Languages -->
+        <u-card>
+          <div class="flex flex-col">
+            <span class="text-sm font-medium text-neutral-400 mb-2 flex items-center gap-2">
+              <u-icon name="i-lucide-flag" class="w-4 h-4" />
+              Languages Added
+            </span>
+            <span class="text-3xl font-bold text-white">{{ stats.personalStats?.languagesAdded || 0 }}</span>
           </div>
-          <!-- Languages -->
-          <div class="flex flex-col p-4 rounded-xl bg-black/40 border border-white/5 backdrop-blur-sm">
-            <span class="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1">Languages Added</span>
-            <span class="text-3xl font-black text-white">{{ stats.personalStats?.languagesAdded || 0 }}</span>
+        </u-card>
+        
+        <!-- Labels -->
+        <u-card>
+          <div class="flex flex-col">
+            <span class="text-sm font-medium text-neutral-400 mb-2 flex items-center gap-2">
+              <u-icon name="i-lucide-tag" class="w-4 h-4" />
+              Labels Created
+            </span>
+            <span class="text-3xl font-bold text-white">{{ stats.personalStats?.labelsCreated || 0 }}</span>
           </div>
-          <!-- Labels -->
-          <div class="flex flex-col p-4 rounded-xl bg-black/40 border border-white/5 backdrop-blur-sm">
-            <span class="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1">Labels Created</span>
-            <span class="text-3xl font-black text-white">{{ stats.personalStats?.labelsCreated || 0 }}</span>
-          </div>
-        </div>
+        </u-card>
       </div>
 
       <!-- Main Content Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        <!-- Project Progress (Takes up 2 columns) -->
-        <div class="lg:col-span-2 flex flex-col gap-4">
-          <h2 class="text-lg font-semibold flex items-center gap-2">
-            <u-icon name="i-lucide-bar-chart-3" class="w-5 h-5 text-neutral-400" />
-            Project Progress
-          </h2>
-          
-          <u-card :ui="{ body: 'p-0 sm:p-0', divide: 'divide-y divide-neutral-800' }" class="bg-[#121212]">
-            <div v-if="stats.projects.length === 0" class="p-6 text-sm text-neutral-500 text-center">
-              No projects found.
-            </div>
-            
-            <a 
-              v-for="project in stats.projects"
-              :key="project.id" 
-              :href="`/projects/${project.id}`"
-              class="block p-4 hover:bg-neutral-900 transition-colors group"
-            >
-              <div class="flex items-center justify-between mb-3">
-                <div class="flex flex-col">
-                  <span class="font-semibold text-neutral-200 group-hover:text-primary-400 transition-colors">{{ project.name }}</span>
-                  <span class="text-xs text-neutral-500">{{ project.keysCount }} Keys • {{ project.languagesCount }} Languages</span>
-                </div>
-                <div class="text-right">
-                  <div class="text-sm font-bold" :class="project.progress === 100 ? 'text-success-500' : 'text-neutral-300'">
-                    {{ project.progress }}%
-                  </div>
-                  <div class="text-xs text-neutral-500">{{ project.translationsCount }} / {{ project.keysCount * project.languagesCount }}</div>
-                </div>
-              </div>
-              <u-progress 
-                :model-value="project.progress" 
-                :max="100" 
-                :color="project.progress === 100 ? 'success' : 'primary'"
-                size="xs"
-              />
-            </a>
-          </u-card>
-        </div>
-
-        <!-- Needs Attention (Takes up 1 column) -->
+        <!-- Productivity Chart (Takes up 1 column) -->
         <div class="flex flex-col gap-4">
           <h2 class="text-lg font-semibold flex items-center gap-2">
-            <u-icon name="i-lucide-alert-circle" class="w-5 h-5 text-amber-500" />
-            Needs Attention
+            <u-icon name="i-lucide-activity" class="w-5 h-5 text-neutral-400" />
+            Your Activity (Last 168 Days)
           </h2>
           
-          <u-card :ui="{ body: 'p-0 sm:p-0', divide: 'divide-y divide-neutral-800' }" class="bg-[#121212]">
-            <template v-if="stats.projects.filter(p => p.progress < 100).length === 0">
+          <u-card :ui="{ body: 'p-4 sm:p-6' }" class="flex-1">
+            <div class="overflow-x-auto pb-2 hide-scrollbar w-full">
+              <div class="flex gap-1" style="width: fit-content; min-width: 100%;">
+                <template v-if="stats.personalStats?.activityHeatmap">
+                  <div class="grid grid-rows-7 gap-1 grid-flow-col auto-cols-max mx-auto">
+                    <div 
+                      v-for="day in stats.personalStats.activityHeatmap" 
+                      :key="day.date"
+                      @mousemove="showTooltip($event, day)"
+                      @mouseleave="hideTooltip"
+                      class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-[2px] transition-colors cursor-pointer hover:ring-1 hover:ring-neutral-400"
+                      :class="{
+                        'bg-neutral-800': day.count === 0,
+                        'bg-primary-500/30': day.count > 0 && day.count < 10,
+                        'bg-primary-500/50': day.count >= 10 && day.count < 25,
+                        'bg-primary-500/80': day.count >= 25 && day.count < 50,
+                        'bg-primary-500': day.count >= 50
+                      }"
+                    ></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+            
+            <div class="flex items-center justify-end gap-2 text-xs text-neutral-500 mt-2">
+              <span>Less</span>
+              <div class="w-3 h-3 rounded-[2px] bg-neutral-800"></div>
+              <div class="w-3 h-3 rounded-[2px] bg-primary-500/30"></div>
+              <div class="w-3 h-3 rounded-[2px] bg-primary-500/50"></div>
+              <div class="w-3 h-3 rounded-[2px] bg-primary-500/80"></div>
+              <div class="w-3 h-3 rounded-[2px] bg-primary-500"></div>
+              <span>More</span>
+            </div>
+          </u-card>
+        </div>
+        <!-- Recently Edited Projects (Takes up 1 column) -->
+        <div class="flex flex-col gap-4">
+          <h2 class="text-lg font-semibold flex items-center gap-2">
+            <u-icon name="i-lucide-history" class="w-5 h-5 text-neutral-400" />
+            Recently Edited
+          </h2>
+          
+          <u-card :ui="{ body: 'p-0 sm:p-0' }">
+            <template v-if="!stats.recentProjects || stats.recentProjects.length === 0">
               <div class="p-6 text-center text-sm text-neutral-500 flex flex-col items-center gap-2">
-                <u-icon name="i-lucide-party-popper" class="w-8 h-8 text-neutral-600" />
-                All caught up! Every project is 100% translated.
+                <u-icon name="i-lucide-ghost" class="w-8 h-8 text-neutral-600" />
+                No recent activity.
               </div>
             </template>
             
             <a 
-              v-for="project in stats.projects.filter(p => p.progress < 100).sort((a,b) => a.progress - b.progress).slice(0, 5)"
-              :key="project.id"
-              :href="`/projects/${project.id}/localization/translations`"
-              class="block p-4 hover:bg-neutral-900 transition-colors group"
+              v-for="project in stats.recentProjects"
+              :key="'recent-'+project.id"
+              :href="`/projects/${project.id}`"
+              class="block p-4 hover:bg-neutral-900 transition-colors group border-b border-neutral-800 last:border-0"
             >
               <div class="flex items-center justify-between">
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-sm font-medium text-neutral-200 group-hover:text-neutral-100 transition-colors">{{ project.name }}</span>
-                  <span class="text-xs text-amber-500/80">{{ (project.keysCount * project.languagesCount) - project.translationsCount }} missing</span>
+                  <span class="text-sm font-medium text-neutral-200 group-hover:text-primary-400 transition-colors">{{ project.name }}</span>
+                  <span v-if="project.lastActivity" class="text-xs text-neutral-500">
+                    {{ new Date(project.lastActivity).toLocaleDateString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }}
+                  </span>
                 </div>
-                <div class="text-right">
-                  <div class="text-sm font-bold text-amber-500">
-                    {{ project.progress }}%
-                  </div>
+                <div class="text-right flex items-center">
+                  <u-icon name="i-lucide-chevron-right" class="w-4 h-4 text-neutral-600 group-hover:text-primary-500 transition-colors" />
                 </div>
               </div>
             </a>
@@ -191,5 +234,25 @@ onUnmounted(() => {
         </div>
       </div>
     </template>
+    
+    <!-- Custom Heatmap Tooltip -->
+    <div 
+      v-if="tooltipData.visible" 
+      class="fixed z-[9999] pointer-events-none bg-neutral-800/95 backdrop-blur-sm border border-neutral-700/50 text-xs px-3 py-2 rounded-lg shadow-xl text-center transform -translate-x-1/2 -translate-y-full transition-opacity duration-100"
+      :style="{ left: tooltipData.x + 'px', top: tooltipData.y + 'px' }"
+    >
+      <div class="font-semibold mb-0.5"><span class="text-primary-400">{{ tooltipData.count }}</span> <span class="text-neutral-200">actions</span></div>
+      <div class="text-neutral-400 text-[10px]">{{ tooltipData.date }}</div>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+</style>

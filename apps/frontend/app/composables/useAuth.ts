@@ -17,7 +17,6 @@ interface User {
 const user = ref<User | null>(null)
 
 export const useAuth = () => {
-  const config = useRuntimeConfig()
   const { fetchApi } = useApi()
   const apiKeyCookie = useCookie('glide_api_key')
 
@@ -31,16 +30,16 @@ export const useAuth = () => {
     // Sync OIDC user to backend to get API key if missing
     if (oidcLoggedIn.value && oidcUser.value && !apiKeyCookie.value) {
       try {
-        const user = oidcUser.value;
-        console.log('Syncing OIDC user:', JSON.parse(JSON.stringify(user)));
-        const info = user.userInfo || user;
+        const oidcInfo = oidcUser.value;
+        console.log('Syncing OIDC user:', JSON.parse(JSON.stringify(oidcInfo)));
+        const info = oidcInfo.userInfo || oidcInfo;
         const userId = info.sub || info.id || info.userId || 'undefined_id';
         const email = info.email || `${userId}@oidc.local`;
         const username = info.preferred_username || info.display_name || info.name || info.nickname || email.split('@')[0];
         const issuer = info.iss;
         const avatarUrl = info.picture || `${issuer}/api/users/${userId}/profile-picture.png`;
         
-        const data = await $fetch<User>(`${config.public.apiBase}/sessions/login/oidc`, {
+        const data = await fetchApi<User>(`/sessions/login/oidc`, {
           method: 'POST',
           body: {
             email,
@@ -80,7 +79,7 @@ export const useAuth = () => {
 
   const login = async (username: string, password: string) => {
     try {
-      const data = await $fetch<User>(`${config.public.apiBase}/sessions/login`, {
+      const data = await fetchApi<User>(`/sessions/login`, {
         method: 'POST',
         body: { username, password }
       })

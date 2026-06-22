@@ -33,42 +33,6 @@ const isSuggestionsEnabled = computed({
   set: (val: boolean) => saveProfileSettings(val)
 })
 
-const colors = [
-  { name: 'Rose', value: 'rose', bgClass: 'bg-rose-500' },
-  { name: 'Blue', value: 'blue', bgClass: 'bg-blue-500' },
-  { name: 'Green', value: 'emerald', bgClass: 'bg-emerald-500' },
-  { name: 'Purple', value: 'purple', bgClass: 'bg-purple-500' },
-  { name: 'Orange', value: 'orange', bgClass: 'bg-orange-500' },
-  { name: 'Zinc', value: 'zinc', bgClass: 'bg-zinc-500' }
-]
-
-const selectedColor = ref(appConfig.ui.colors.primary)
-const isCustomColor = computed(() => selectedColor.value.startsWith('#'))
-const tempCustomColor = ref('#ffffff')
-const hexInputString = ref('#ffffff')
-
-const enableShortcuts = ref(true)
-
-const selectColor = (colorValue: string) => {
-  selectedColor.value = colorValue
-  appConfig.ui.colors.primary = colorValue
-  localStorage.setItem('glide_primary_color', colorValue)
-  toast.add({ title: 'Theme updated successfully', color: 'success' })
-}
-
-const onColorPickerUpdate = (val: string) => {
-  hexInputString.value = val
-  selectColor(val)
-}
-
-const applyHexInput = () => {
-  const val = hexInputString.value
-  if (/^#([0-9A-F]{3}){1,2}$/i.test(val)) {
-    tempCustomColor.value = val
-    selectColor(val)
-  }
-}
-
 const saveSettings = () => {
   localStorage.setItem('glide_enable_shortcuts', enableShortcuts.value ? 'true' : 'false')
   toast.add({ title: 'Settings saved', color: 'success' })
@@ -108,15 +72,7 @@ const resetShortcut = (name: keyof typeof shortcuts.value) => {
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
   loadShortcuts()
-  const savedColor = localStorage.getItem('glide_primary_color')
-  if (savedColor) {
-    selectedColor.value = savedColor
-    appConfig.ui.colors.primary = savedColor
-    if (savedColor.startsWith('#')) {
-      tempCustomColor.value = savedColor
-      hexInputString.value = savedColor
-    }
-  }
+  loadSettings()
   
   const savedShortcuts = localStorage.getItem('glide_enable_shortcuts')
   if (savedShortcuts) enableShortcuts.value = savedShortcuts === 'true'
@@ -134,54 +90,6 @@ onUnmounted(() => {
       <p class="text-sm text-neutral-400 mt-1">Customize the application and your personal workflow.</p>
     </div>
 
-    <u-card :ui="{ body: { padding: 'p-6 sm:p-8' } }">
-      <div class="space-y-6">
-        <div>
-          <h2 class="text-lg font-semibold text-neutral-200">Primary Color</h2>
-          <p class="text-sm text-neutral-400 mt-1">Select the primary accent color for the entire application.</p>
-        </div>
-
-        <div class="flex gap-4 flex-wrap">
-          <button
-            v-for="color in colors"
-            :key="color.value"
-            class="group flex flex-col items-center gap-3 p-4 rounded-xl border transition-all"
-            :class="selectedColor === color.value ? 'border-primary-500 bg-primary-500/10 shadow-md' : 'border-neutral-800 hover:border-neutral-700 bg-neutral-900/50 hover:bg-neutral-800'"
-            @click="selectColor(color.value)"
-          >
-            <div class="w-12 h-12 rounded-full shadow-inner flex items-center justify-center transition-transform group-hover:scale-110" :class="color.bgClass">
-              <u-icon v-if="selectedColor === color.value" name="i-lucide-check" class="text-white w-6 h-6" />
-            </div>
-            <span class="text-sm font-medium" :class="selectedColor === color.value ? 'text-primary-500' : 'text-neutral-400 group-hover:text-neutral-200'">{{ color.name }}</span>
-          </button>
-
-          <u-popover>
-            <button
-              class="group flex flex-col items-center gap-3 p-4 rounded-xl border transition-all"
-              :class="isCustomColor ? 'border-primary-500 bg-primary-500/10 shadow-md' : 'border-neutral-800 hover:border-neutral-700 bg-neutral-900/50 hover:bg-neutral-800'"
-            >
-              <div 
-                class="w-12 h-12 rounded-full shadow-inner flex items-center justify-center transition-transform group-hover:scale-110" 
-                :class="!isCustomColor && 'bg-gradient-to-br from-red-500 via-green-500 to-blue-500'"
-                :style="isCustomColor ? `background-color: ${selectedColor}` : ''"
-              >
-                <u-icon v-if="isCustomColor" name="i-lucide-check" class="text-white w-6 h-6" />
-              </div>
-              <span class="text-sm font-medium" :class="isCustomColor ? 'text-primary-500' : 'text-neutral-400 group-hover:text-neutral-200'">Custom</span>
-            </button>
-            <template #content>
-              <div class="p-4 bg-neutral-900 border border-neutral-800 rounded-lg shadow-xl flex flex-col gap-3">
-                <u-color-picker v-model="tempCustomColor" @update:model-value="onColorPickerUpdate" />
-                <div class="flex items-center gap-2">
-                  <span class="text-xs text-neutral-400 font-medium">HEX:</span>
-                  <u-input v-model="hexInputString" size="sm" class="flex-1" placeholder="#FFFFFF" @blur="applyHexInput" @keyup.enter="applyHexInput" />
-                </div>
-              </div>
-            </template>
-          </u-popover>
-        </div>
-      </div>
-    </u-card>
 
     <u-card :ui="{ body: { padding: 'p-6 sm:p-8' } }">
       <div class="space-y-6">

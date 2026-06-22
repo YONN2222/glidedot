@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TranslationKeyScopeNode } from '@glidedot/types'
+import type { TranslationKeyScopeNode } from '~/types'
 
 const props = defineProps<{
   visibleScopes: TranslationKeyScopeNode[]

@@ -54,7 +54,23 @@ export default async function keyRoutes(fastify: FastifyInstance) {
 
     fastify.delete('/:projectId/:keyId', { preHandler: [checkProjectAccess] }, async (request) => {
         const { projectId, keyId } = request.params as { projectId: string, keyId: string };
-        return service.deleteKey(parseInt(projectId), parseInt(keyId));
+        const result = await service.deleteKey(parseInt(projectId), parseInt(keyId));
+        if (request.user) {
+            await service.logActivity(request.user.id, parseInt(projectId), 'KEY_DELETED', JSON.stringify({ keyId }));
+        }
+        return result;
+    });
+
+    fastify.patch('/:projectId/:keyId', { preHandler: [checkProjectAccess] }, async (request) => {
+        const { projectId, keyId } = request.params as { projectId: string, keyId: string };
+        const body = request.body as { key: string };
+        const result = await service.updateKey(parseInt(projectId), parseInt(keyId), body.key);
+        
+        if (request.user) {
+            await service.logActivity(request.user.id, parseInt(projectId), 'KEY_UPDATED', JSON.stringify({ keyId, newKey: body.key }));
+        }
+        
+        return result;
     });
 
     fastify.post('/:projectId/:keyId/translations/:languageId/approve', { preHandler: [checkProjectAccess] }, async (request, reply) => {
@@ -108,30 +124,50 @@ export default async function keyRoutes(fastify: FastifyInstance) {
     fastify.post('/:projectId/bulk-delete', { preHandler: [checkProjectAccess] }, async (request) => {
         const { projectId } = request.params as { projectId: string };
         const { keyIds } = request.body as { keyIds: number[] };
-        return service.bulkDeleteKeys(parseInt(projectId), keyIds);
+        const result = await service.bulkDeleteKeys(parseInt(projectId), keyIds);
+        if (request.user) {
+            await service.logActivity(request.user.id, parseInt(projectId), 'KEY_DELETED', JSON.stringify({ count: keyIds.length }));
+        }
+        return result;
     });
 
     fastify.post('/:projectId/:keyId/labels', { preHandler: [checkProjectAccess] }, async (request) => {
         const { projectId, keyId } = request.params as { projectId: string, keyId: string };
         const { labelId } = request.body as { labelId: number };
-        return service.addLabelToKey(parseInt(projectId), parseInt(keyId), labelId);
+        const result = await service.addLabelToKey(parseInt(projectId), parseInt(keyId), labelId);
+        if (request.user) {
+            await service.logActivity(request.user.id, parseInt(projectId), 'LABEL_ASSIGNED', JSON.stringify({ keyId, labelId }));
+        }
+        return result;
     });
 
     fastify.post('/:projectId/bulk-labels-add', { preHandler: [checkProjectAccess] }, async (request) => {
         const { projectId } = request.params as { projectId: string };
         const { keyIds, labelId } = request.body as { keyIds: number[], labelId: number };
-        return service.bulkAddLabelToKeys(parseInt(projectId), keyIds, labelId);
+        const result = await service.bulkAddLabelToKeys(parseInt(projectId), keyIds, labelId);
+        if (request.user) {
+            await service.logActivity(request.user.id, parseInt(projectId), 'LABEL_ASSIGNED', JSON.stringify({ count: keyIds.length, labelId }));
+        }
+        return result;
     });
 
     fastify.delete('/:projectId/:keyId/labels/:labelId', { preHandler: [checkProjectAccess] }, async (request) => {
         const { projectId, keyId, labelId } = request.params as { projectId: string, keyId: string, labelId: string };
-        return service.removeLabelFromKey(parseInt(projectId), parseInt(keyId), parseInt(labelId));
+        const result = await service.removeLabelFromKey(parseInt(projectId), parseInt(keyId), parseInt(labelId));
+        if (request.user) {
+            await service.logActivity(request.user.id, parseInt(projectId), 'LABEL_REMOVED', JSON.stringify({ keyId, labelId }));
+        }
+        return result;
     });
 
     fastify.post('/:projectId/bulk-labels-remove', { preHandler: [checkProjectAccess] }, async (request) => {
         const { projectId } = request.params as { projectId: string };
         const { keyIds, labelId } = request.body as { keyIds: number[], labelId: number };
-        return service.bulkRemoveLabelFromKeys(parseInt(projectId), keyIds, labelId);
+        const result = await service.bulkRemoveLabelFromKeys(parseInt(projectId), keyIds, labelId);
+        if (request.user) {
+            await service.logActivity(request.user.id, parseInt(projectId), 'LABEL_REMOVED', JSON.stringify({ count: keyIds.length, labelId }));
+        }
+        return result;
     });
 
     fastify.post('/:projectId/:keyId/auto-translate', { preHandler: [checkProjectAccess] }, async (request) => {
@@ -139,6 +175,9 @@ export default async function keyRoutes(fastify: FastifyInstance) {
         const { targetLanguageIds, provider } = request.body as { targetLanguageIds: number[], provider?: 'deepl' | 'google' };
 
         await service.autoTranslate(parseInt(projectId), parseInt(keyId), targetLanguageIds, provider || 'google', request.user?.id);
+        if (request.user) {
+            await service.logActivity(request.user.id, parseInt(projectId), 'AUTO_TRANSLATED', JSON.stringify({ keyId, count: targetLanguageIds.length }));
+        }
         return { success: true };
     });
 

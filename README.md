@@ -13,27 +13,31 @@
 
 <br />
 
-## 🎯 Overview & Background
+## 💡 Overview
 
 ### What is glide.?
-glide. is a powerful, self-hosted platform built to streamline the localization of your digital products. It provides a beautiful interface to manage translation keys, labels, and multiple languages across various projects. With built-in AI translation capabilities and robust backup systems, it takes the heavy lifting out of managing multi-language applications.
+glide. is an enterprise-grade, self-hosted localization and translation management platform. It provides a highly optimized interface to manage translation keys, labels, conventions, and multiple languages across various projects. Designed for modern development workflows, it takes the heavy lifting out of managing multi-language applications through robust APIs and automated pipelines.
 
-### The Story Behind It
-**glide.** started out as a passion project—mostly "vibecoded" for fun to explore modern technologies and AI-assisted development paradigms. However, despite being born out of curiosity, an immense amount of effort went into engineering the prompts, crafting a rock-solid project structure, brainstorming features, and ensuring robust security practices. The result is a system that is not just an experiment, but completely secure, stable, and **ready to be used in production environments.**
+### Built for Production
+Engineered from the ground up with a focus on security, data integrity, and performance, glide. is designed to be the single source of truth for your organization's localized content. It features a rock-solid architecture leveraging SQLite and Fastify, ensuring high throughput and reliability. With features like strict Naming Conventions, an integrated Translation Review System, and automated S3 disaster recovery, the platform is ready to be deployed in mission-critical production environments.
 
-## 🚀 Features
+### AI-Assisted, Human Engineered
+While **glide.** was brought to life with heavy assistance from modern AI coding agents, it is far from a simple generated prototype. An immense amount of human effort went into architectural planning, prompt engineering, and security design. Every feature—from the strictly typed database schemas to the UI micro-interactions—was meticulously guided to ensure the resulting platform is robust, secure, and truly ready for production environments.
 
-- **Centralized Translation Hub:** Manage keys, values, and language files for unlimited projects.
-- **Auto-Translation via API:** Integrated deeply with DeepL and Google Translate for instant context-aware translations.
-- **Custom Whitelabeling:** Personalize the entire platform with your own logo, branding, and color schemes.
-- **Enterprise Ready Auth:** Out-of-the-box OpenID Connect (OIDC) support for secure SSO.
-- **Automated S3 Backups:** Cronjob-powered JSON backups of your localization data directly to AWS/MinIO.
-- **Team & Quota Management:** Fine-grained access control, user roles, and translation quotas.
+## 💎 Core Features
+
+- **In-Context Editor:** Edit translations live and visually directly inside your target application using the Glide overlay.
+- **Naming Conventions & Linting:** Enforce strict key structures via visual Templates, shared Variables, and a global Glossary Linter.
+- **Translation Review System:** Ensure maximum quality by routing new translations through a strict drafting and approval workflow.
+- **Activity Logs & Heatmap:** Track every single action on the platform, beautifully visualized in a GitHub-style productivity heatmap.
+- **Auto-Translation via AI:** Integrated deeply with DeepL and Google Translate for instant, context-aware translation suggestions.
+- **Enterprise Ready:** Out-of-the-box OpenID Connect (OIDC) for secure SSO and automated S3 Backups for disaster recovery.
+- **Fine-grained Access Control:** Manage teams, user roles (Admins, Reviewers), and set monthly translation quotas.
 - **Blazing Fast:** Powered end-to-end by the Bun runtime, Fastify, and Nuxt.
 
 ---
 
-## 🏗 Tech Stack
+## ⚙️ Tech Stack
 
 glide. is structured as a **Monorepo** (powered by Turborepo) and uses the modern JavaScript ecosystem:
 
@@ -45,47 +49,16 @@ glide. is structured as a **Monorepo** (powered by Turborepo) and uses the moder
 
 ---
 
-## 🛠 Getting Started (Local Development)
+## 📚 Documentation
 
-### 1. Prerequisites
-You need to have **[Bun](https://bun.sh/)** installed on your machine.
+Dive into our comprehensive guides to learn how to deploy, configure, and use all the powerful features glide has to offer:
 
-### 2. Installation
-Clone the repository and install all dependencies:
-```bash
-git clone https://github.com/marl0nx/glidedot.git
-cd glidedot
-
-# Install dependencies for both frontend and backend
-bun install
-```
-
-### 3. Run the Dev Servers
-You can start both the frontend and the backend simultaneously using Turbo:
-```bash
-# From the root directory
-bun run dev
-```
-- **Frontend** will be running at `http://localhost:3000`
-- **Backend API** will be running at `http://localhost:3001`
-
----
-
-## 🐳 Docker Deployment (Production)
-
-Deploying glide. is incredibly easy thanks to the included `docker-compose.yml`. We do not use `.env` files—all configuration is done directly via Docker Compose.
-
-1. Open `docker-compose.yml` and insert your OIDC, DeepL, and S3 credentials into the `environment` blocks.
-2. Build and start the containers in detached mode:
-
-```bash
-docker-compose up -d --build
-```
-
-### What happens under the hood?
-- **Frontend Container:** Builds a standalone Nuxt Nitro server using a multi-stage process for minimal image size.
-- **Backend Container:** Runs the Fastify API natively using the lightweight `oven/bun:1-alpine` image.
-- **Persistent Data:** A Docker volume (`glide_data`) is created automatically to ensure your SQLite database remains untouched between container restarts.
+- [**Installation & Deployment**](docs/INSTALL.md) — Learn how to run glide locally or deploy it in production using Docker.
+- [**In-Context Editing**](docs/IN-CONTEXT-EDIT.md) — Set up live visual editing directly inside your target applications.
+- [**Key Conventions & Templates**](docs/CONVENTIONS.md) — Enforce strict naming rules using templates, global variables, and glossary linting.
+- [**The Review System**](docs/REVIEWS.md) — Understand how the drafting, approval, and rejection lifecycle works for translations.
+- [**Migration & Backups**](docs/MIGRATION.md) — Import/Export your translations and configure automated disaster recovery via S3.
+- [**Theming & UI Customization**](docs/THEMING.md) — Learn about our Nuxt UI customizations and our premium dark mode philosophy.
 
 ---
 

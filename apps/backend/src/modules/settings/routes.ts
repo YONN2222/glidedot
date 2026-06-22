@@ -9,7 +9,7 @@ export const settingsRoutes: FastifyPluginAsync = async (app: FastifyInstance) =
   const teamService = new TeamService(app.db);
   const { requireAdmin } = createAuthHooks(userService, teamService);
 
-  // Anyone can read public settings (like whitelabeling) or we can make it public.
+  // Anyone can read public settings (like theming) or we can make it public.
   // Actually, we'll just allow authenticated users to read settings for now,
   // or we can make GET public if it's strictly for UI appearance.
   app.get('/', async (request, reply) => {

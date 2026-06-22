@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import type { Project } from '@glidedot/types'
+import type { Project } from '~/types'
 
 definePageMeta({
   layout: 'default'
@@ -79,7 +79,10 @@ const saveProject = async () => {
         method: 'PATCH',
         body: {
           name: selectedProject.value.name,
-          sourceLanguageId: selectedProject.value.sourceLanguageId
+          sourceLanguageId: selectedProject.value.sourceLanguageId,
+          inContextUrl: selectedProject.value.inContextUrl,
+          reviewEnabled: selectedProject.value.reviewEnabled,
+          requireTemplate: selectedProject.value.requireTemplate
         }
       })
       toast.add({ title: 'Project updated successfully', color: 'success' })

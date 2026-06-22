@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Project } from '@glidedot/types'
+import type { Project } from '~/types'
 
 const props = defineProps<{
   modelValue: boolean
@@ -36,6 +36,26 @@ const isOpen = computed({
             class="w-full"
           />
         </u-form-field>
+
+        <u-form-field v-if="mode === 'edit'" label="In-Context Preview URL" description="URL where your app is running to enable live visual editing.">
+          <u-input v-model="project.inContextUrl" placeholder="https://staging.myapp.com" class="w-full" @keyup.enter="emit('save')" />
+        </u-form-field>
+
+        <div v-if="mode === 'edit'" class="flex items-center justify-between p-4 rounded-lg ring-1 ring-default bg-neutral-800/50 mt-2">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm font-medium">Project-Wide Review Mode</span>
+            <span class="text-xs text-neutral-400">Require approval for all translation changes in this project.</span>
+          </div>
+          <u-switch v-model="project.reviewEnabled" />
+        </div>
+
+        <div v-if="mode === 'edit'" class="flex items-center justify-between p-4 rounded-lg ring-1 ring-default bg-neutral-800/50 mt-2">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm font-medium">Require Templates for Keys</span>
+            <span class="text-xs text-neutral-400">Disable freeform keys. New keys must use a predefined schema template.</span>
+          </div>
+          <u-switch v-model="project.requireTemplate" />
+        </div>
       </div>
     </template>
 

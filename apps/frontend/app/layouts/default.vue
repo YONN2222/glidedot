@@ -1,19 +1,21 @@
 <script setup lang="ts">
 import type { DropdownMenuItem, NavigationMenuItem, BreadcrumbItem } from '@nuxt/ui'
-import type { Project } from '@glidedot/types'
+import type { Project } from '~/types'
 import { useThemeColor } from '~/composables/useThemeColor'
+import { useThemeBackground } from '~/composables/useThemeBackground'
 
 const route = useRoute();
-const { fetchApi } = useApi()
+const { fetchApi, isApiLoading } = useApi()
 const { user, isAdmin } = useAuth()
 const { settings, loadSettings } = useSettings()
 const appConfig = useAppConfig()
 
 useThemeColor(computed(() => appConfig.ui.colors.primary))
+useThemeBackground(computed(() => settings.value.themeMode || 'dark'), computed(() => settings.value.customBackgroundColor || '#111111'))
 
 await loadSettings()
 
-// Apply Whitelabeling Settings
+// Apply Theming Settings
 onMounted(() => {
   if (settings.value.primaryColor) {
     appConfig.ui.colors.primary = settings.value.primaryColor
@@ -68,7 +70,7 @@ const primaryItems: ComputedRef<NavigationMenuItem[]> = computed(() => {
       href: '/',
     },
     {
-      label: currentProject.value?.name || 'Projects',
+      label: 'Projects',
       icon: 'i-lucide-layout-dashboard',
       defaultOpen: route.path.startsWith('/projects'),
       children: [
@@ -105,7 +107,7 @@ const primaryItems: ComputedRef<NavigationMenuItem[]> = computed(() => {
           href: '/admin/users'
         },
         {
-          label: 'Activity Logs',
+          label: 'Insights',
           icon: 'i-lucide-activity',
           href: '/admin/activity'
         },
@@ -120,9 +122,9 @@ const primaryItems: ComputedRef<NavigationMenuItem[]> = computed(() => {
           defaultOpen: route.path.startsWith('/admin/settings'),
           children: [
             {
-              label: 'Whitelabeling',
+              label: 'Theming',
               icon: 'i-lucide-palette',
-              href: '/admin/settings/whitelabeling'
+              href: '/admin/settings/theming'
             }
           ]
         }
@@ -135,37 +137,31 @@ const primaryItems: ComputedRef<NavigationMenuItem[]> = computed(() => {
 
 const secondaryItems = computed<NavigationMenuItem[]>(() => [
   {
-    label: 'Localization',
-    icon: 'i-lucide-languages',
-    defaultOpen: true,
-    children: [
-      {
-        label: 'Keys',
-        icon: 'i-lucide-logs',
-        href: `/projects/${currentProject.value?.id}/localization/keys`
-      },
-      {
-        label: 'Labels',
-        icon: 'i-lucide-tag',
-        href: `/projects/${currentProject.value?.id}/localization/labels`
-      },
-      {
-        label: 'Languages',
-        icon: 'i-lucide-flag',
-        href: `/projects/${currentProject.value?.id}/localization/languages`
-      },
-      {
-        label: 'Translations',
-        icon: 'i-lucide-a-large-small',
-        href: `/projects/${currentProject.value?.id}/localization/translations`
-      },
-      {
-        label: 'Reviews',
-        icon: 'i-lucide-check-circle',
-        href: `/projects/${currentProject.value?.id}/localization/reviews`
-      },
-    ]
-  }
+    label: 'Structure',
+    icon: 'i-lucide-database',
+    href: `/projects/${currentProject.value?.id}/structure`
+  },
+  {
+    label: 'Conventions',
+    icon: 'i-lucide-book-dashed',
+    href: `/projects/${currentProject.value?.id}/conventions`
+  },
+  {
+    label: 'Translations',
+    icon: 'i-lucide-a-large-small',
+    href: `/projects/${currentProject.value?.id}/translations`
+  },
+  {
+    label: 'In-Context Editor',
+    icon: 'i-lucide-monitor-play',
+    href: `/projects/${currentProject.value?.id}/in-context`,
+    class: 'hidden md:flex'
+  },
+  {
+    label: 'Reviews',
+    icon: 'i-lucide-check-circle',
+    href: `/projects/${currentProject.value?.id}/reviews`
+  },
 ])
 
 const profileItems: DropdownMenuItem[] = [
@@ -203,7 +199,7 @@ watch(() => route.path, () => {
 </script>
 
 <template>
-  <div class="flex min-h-svh bg-neutral-950">
+  <div class="flex min-h-svh bg-black">
     <u-sidebar class="hidden md:flex" v-model:open="isSidebarOpen" variant="inset" collapsible="icon" side="left" title="Navigation"
                :ui="{ header: 'min-h-none p-2' }">
 
@@ -289,7 +285,19 @@ watch(() => route.path, () => {
         </u-breadcrumb>
       </div>
 
-      <div class="flex-1 p-4">
+      <div class="flex-1 p-4 relative">
+        <transition 
+          enter-active-class="transition-opacity duration-300 delay-150" 
+          enter-from-class="opacity-0" 
+          enter-to-class="opacity-100" 
+          leave-active-class="transition-opacity duration-200" 
+          leave-from-class="opacity-100" 
+          leave-to-class="opacity-0"
+        >
+          <div v-if="isApiLoading" class="absolute inset-0 z-50 bg-neutral-900/50 backdrop-blur-sm flex items-center justify-center rounded-b-xl">
+             <u-icon name="i-lucide-loader-2" class="w-8 h-8 animate-spin text-primary-500" />
+          </div>
+        </transition>
         <slot/>
       </div>
     </div>
@@ -334,7 +342,7 @@ watch(() => route.path, () => {
     </u-modal>
 
     <!-- Mobile Bottom Navigation -->
-    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-neutral-950/90 backdrop-blur-xl border-t border-default z-50 pb-[env(safe-area-inset-bottom)]">
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-xl border-t border-default z-50 pb-[env(safe-area-inset-bottom)]">
       <div class="flex justify-around items-center h-16 px-2">
         <nuxt-link to="/" class="flex flex-col items-center justify-center w-full h-full text-muted hover:text-primary transition-colors" exact-active-class="!text-primary">
           <u-icon name="i-lucide-house" class="w-6 h-6 mb-1" />

@@ -66,7 +66,7 @@ export default async function usersRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string };
         const body = request.body as any;
 
-        const { users } = await import('../../auth/schema');
+        const { users } = await import('../schema');
         const { eq } = await import('drizzle-orm');
         const targetUsers = await fastify.db.select().from(users).where(eq(users.id, parseInt(id)));
 

@@ -1,6 +1,7 @@
 export default defineNuxtRouteMiddleware(async (to, _from) => {
   const { isLoggedIn, fetchUser } = useAuth()
   const { loggedIn: oidcLoggedIn, fetch: fetchOidc } = useOidcAuth()
+  const { fetchApi } = useApi()
   const config = useRuntimeConfig()
 
   // Ensure OIDC session is fetched before making redirect decisions
@@ -25,7 +26,7 @@ export default defineNuxtRouteMiddleware(async (to, _from) => {
 
   // Check setup status
   try {
-    const status = await $fetch<{ setupRequired: boolean }>(`${config.public.apiBase}/setup/status`)
+    const status = await fetchApi<{ setupRequired: boolean }>('/setup/status')
     if (status.setupRequired) {
       if (to.path !== '/setup') {
         return navigateTo('/setup')

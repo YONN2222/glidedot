@@ -31,7 +31,7 @@ export default async function sessionsRoutes(fastify: FastifyInstance) {
         const oidcGroupsStr = JSON.stringify(oidcGroupsArr);
 
         // Import users and eq locally since we need them
-        const { users } = await import('../../auth/schema');
+        const { users } = await import('../../users/schema');
         const { eq } = await import('drizzle-orm');
 
         let user = await userService.getByUsername(username);

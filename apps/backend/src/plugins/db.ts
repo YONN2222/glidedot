@@ -10,6 +10,8 @@ export default fp(async (fastify) => {
     const db = drizzle(sqlite, { schema });
     fastify.decorate('db', db);
 
+    // Migrations are now handled by `drizzle-kit push` on container startup
+
     // Bootstrap Admin User
     const userService = new UserService(db);
     await userService.createAdminIfNotExists();

@@ -1,0 +1,511 @@
+<script setup lang="ts">
+import { getPaginationRowModel } from '@tanstack/vue-table'
+import type { TableColumn, DropdownMenuItem } from '@nuxt/ui'
+import type { TranslationKey, TranslationLabel, Project } from '~/types'
+import { useTranslation } from '~/composables/localization/useTranslation'
+import { useConventions } from '~/composables/localization/useConventions'
+import { useRoute } from 'vue-router'
+import { useProject } from '~/composables/useProject'
+import { useApi } from '~/composables/useApi'
+
+const route = useRoute()
+const projectId = parseInt(route.params.id as string)
+const { fetchApi } = useApi()
+
+const {
+  templates,
+  glossary,
+  variables,
+  loadConventions
+} = useConventions()
+
+const { data: projectsData } = await useAsyncData(`projects-${projectId}`, () => fetchApi('/localization/projects'))
+const projects = computed<Project[]>(() => (projectsData.value as Project[]) || [])
+const { currentProject } = useProject(projects)
+
+const {
+  init,
+  keys: realKeys,
+  labels: projectLabels,
+  isLoading,
+  addKey,
+  updateKey,
+  bulkDeleteKeys,
+  bulkAddLabelToKeys,
+  bulkRemoveLabelFromKeys,
+  addLabelToKey,
+  removeLabelFromKey
+} = useTranslation()
+
+const search = ref("")
+const pagination = ref({pageIndex: 0, pageSize: 15})
+const rowSelection = ref<Record<string, boolean>>({})
+const isEditLabelsModalOpen = ref(false)
+const isDeleteModalOpen = ref(false)
+const isAddKeyModalOpen = ref(false)
+const editingKeyId = ref<number | null>(null)
+const editingKeyName = ref("")
+
+const currentPagination = computed({
+  get: () => pagination.value.pageIndex + 1,
+  set: (val) => {
+    pagination.value = {
+      ...pagination.value,
+      pageIndex: val - 1
+    }
+  }
+})
+
+const columns: TableColumn<TranslationKey>[] = [
+  {id: 'select'},
+  {accessorKey: 'key', header: 'Translation Key'},
+  {id: 'conventions', header: 'Conventions'},
+  {accessorKey: 'labels', header: 'Labels'},
+]
+
+onMounted(() => {
+  init()
+  loadConventions(projectId)
+})
+
+const selectedKeys = computed(() => {
+  return realKeys.value.filter((_, index) => rowSelection.value[index.toString()])
+})
+
+const deleteSelectedKeys = async () => {
+  const ids = selectedKeys.value.map(k => k.id)
+  if (ids.length) {
+    await bulkDeleteKeys(ids)
+  }
+  rowSelection.value = {}
+  isDeleteModalOpen.value = false
+}
+
+const selectedRowsCount = computed(() => selectedKeys.value.length)
+
+const commonLabels = computed(() => {
+  if (selectedKeys.value.length === 0) return []
+  const firstKeyLabels = selectedKeys.value[0]?.labels || []
+  return firstKeyLabels.filter(label =>
+      selectedKeys.value.every(key =>
+          key.labels?.some(l => l.id === label.id)
+      )
+  )
+})
+
+const availableLabels = computed(() => {
+  const commonIds = commonLabels.value.map(l => l.id)
+  return projectLabels.value.filter(l => !commonIds.includes(l.id))
+})
+
+const addLabelToSelection = async (label: TranslationLabel) => {
+  const ids = selectedKeys.value.filter(key => !key.labels?.some(l => l.id === label.id)).map(k => k.id)
+  if (ids.length) {
+    await bulkAddLabelToKeys(ids, label.id)
+  }
+}
+
+const removeLabelFromSelection = async (labelId: number) => {
+  const ids = selectedKeys.value.filter(key => key.labels?.some(l => l.id === labelId)).map(k => k.id)
+  if (ids.length) {
+    await bulkRemoveLabelFromKeys(ids, labelId)
+  }
+}
+
+const addNewKey = async (keyName: string) => {
+  await addKey(keyName)
+  isAddKeyModalOpen.value = false
+}
+
+const startEditingKey = (keyObj: TranslationKey) => {
+  editingKeyId.value = keyObj.id
+  editingKeyName.value = keyObj.key
+}
+
+const saveKeyName = async (keyId: number) => {
+  if (editingKeyId.value === keyId && editingKeyName.value.trim() !== '') {
+    const keyToUpdate = realKeys.value.find(k => k.id === keyId)
+    if (keyToUpdate && keyToUpdate.key !== editingKeyName.value) {
+      await updateKey(keyId, editingKeyName.value)
+    }
+  }
+  editingKeyId.value = null
+}
+
+const bulkActions = computed<DropdownMenuItem[][]>(() => [
+  [
+    {
+      label: 'Edit Labels',
+      icon: 'i-lucide-tag',
+      onSelect: () => {
+        isEditLabelsModalOpen.value = true
+      }
+    },
+    {
+      label: 'Delete',
+      icon: 'i-lucide-trash-2',
+      color: 'error' as const,
+      onSelect: () => {
+        isDeleteModalOpen.value = true
+      }
+    }
+  ]
+])
+
+const filteredKeysMobile = computed(() => {
+  if (!search.value) return realKeys.value
+  const s = search.value.toLowerCase()
+  return realKeys.value.filter(k => k.key.toLowerCase().includes(s))
+})
+
+const paginatedKeysMobile = computed(() => {
+  const start = pagination.value.pageIndex * pagination.value.pageSize
+  return filteredKeysMobile.value.slice(start, start + pagination.value.pageSize)
+})
+
+const toggleSelection = (keyObj: TranslationKey) => {
+  const idx = realKeys.value.indexOf(keyObj).toString()
+  rowSelection.value[idx] = !rowSelection.value[idx]
+}
+
+const getRegexForTemplate = (segments: any[], variables: any[]) => {
+  let pattern = '^'
+  let isOptionalGroupOpen = 0
+  
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i]
+    let segPattern = ''
+    
+    if (seg.type === 'constant') {
+      segPattern = (seg.constantValue || '').replace(/\./g, '\\.')
+    } else if (seg.type === 'enum') {
+      const opts = seg.options || []
+      segPattern = opts.length > 0 ? `(${opts.join('|')})` : '[^.]+'
+    } else if (seg.type === 'shared-enum') {
+      const v = variables.find((v: any) => v.id === seg.variableId)
+      if (v) {
+        const opts = v.options.split(',').map((s: string) => s.trim()).filter(Boolean)
+        segPattern = opts.length > 0 ? `(${opts.join('|')})` : '[^.]+'
+      } else {
+        segPattern = '[^.]+'
+      }
+    } else if (seg.type === 'nested-path') {
+      segPattern = '.*'
+    } else {
+      segPattern = '[^.]+'
+    }
+    
+    const isLast = i === segments.length - 1
+    
+    if (seg.isOptional) {
+      pattern += `(?:${segPattern}`
+      if (!isLast && seg.type !== 'nested-path') pattern += '\\.'
+      isOptionalGroupOpen++
+    } else {
+      pattern += segPattern
+      if (!isLast && seg.type !== 'nested-path') pattern += '\\.'
+    }
+  }
+  
+  pattern += ')'.repeat(isOptionalGroupOpen)
+  pattern += '$'
+  return new RegExp(pattern)
+}
+
+const validateKeyCache = new Map<string, string[]>()
+
+const validateKey = (keyName: string) => {
+  if (validateKeyCache.has(keyName)) return validateKeyCache.get(keyName)!
+  const warnings: string[] = []
+  
+  // Glossary
+  glossary.value.forEach(term => {
+    const badWords = term.badWord.split(',').map(w => w.trim()).filter(Boolean)
+    for (const word of badWords) {
+      const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const regex = new RegExp(`(^|[\\.\\-_\\s])${escapedWord}([\\.\\-_\\s]|$)`, 'i')
+      if (regex.test(keyName)) {
+        warnings.push(`Forbidden word: "${word}" (Use "${term.goodWord}")`)
+      }
+    }
+  })
+  
+  // Templates
+  if (currentProject.value?.requireTemplate && templates.value.length > 0) {
+    let matchesTemplate = false
+    for (const t of templates.value) {
+      try {
+        const segments = JSON.parse(t.segments)
+        const regex = getRegexForTemplate(segments, variables.value)
+        if (regex.test(keyName)) {
+          matchesTemplate = true
+          break
+        }
+      } catch(e) {}
+    }
+    if (!matchesTemplate) {
+      warnings.push("Does not match any Key Template schema")
+    }
+  }
+  
+  validateKeyCache.set(keyName, warnings)
+  return warnings
+}
+
+watch([glossary, templates, variables], () => {
+  validateKeyCache.clear()
+}, { deep: true })
+</script>
+
+<template>
+  <div class="flex flex-col">
+    <div class="flex flex-col md:flex-row justify-between gap-4">
+      <!-- Title was removed as it's now in the parent page -->
+    </div>
+
+    <key-edit-labels-modal
+      v-model="isEditLabelsModalOpen"
+      :selected-count="selectedRowsCount"
+      :common-labels="commonLabels"
+      :available-labels="availableLabels"
+      @add-label="addLabelToSelection"
+      @remove-label="removeLabelFromSelection"
+    />
+
+    <key-delete-modal
+      v-model="isDeleteModalOpen"
+      :selected-count="selectedRowsCount"
+      @confirm="deleteSelectedKeys"
+    />
+
+    <key-create-modal
+      v-model="isAddKeyModalOpen"
+      :templates="templates"
+      :glossary="glossary"
+      :variables="variables"
+      :require-template="currentProject?.requireTemplate"
+      @create="addNewKey"
+    />
+
+    <div class="flex flex-col md:flex-row justify-between py-4 gap-4">
+      <u-input v-model="search" icon="i-lucide-search" size="lg" placeholder="Search keys..." class="w-full md:w-80"/>
+      <div class="flex items-center gap-2 w-full md:w-auto justify-end">
+        <u-dropdown-menu v-if="selectedRowsCount > 0" :items="bulkActions">
+          <u-button
+              variant="subtle"
+              color="neutral"
+              :label="`Actions (${selectedRowsCount})`"
+              icon="i-lucide-chevron-down"
+              trailing
+          />
+        </u-dropdown-menu>
+        <u-button
+            variant="subtle"
+            color="neutral"
+            label="Add Key"
+            icon="i-lucide-plus"
+            @click="isAddKeyModalOpen = true"
+        />
+      </div>
+    </div>
+
+    <div class="w-full space-y-4 pb-4">
+      <div class="hidden md:block">
+        <u-table
+            v-model:row-selection="rowSelection"
+            v-model:pagination="pagination"
+            v-model:global-filter="search"
+            :data="realKeys"
+            :columns="columns"
+            :loading="isLoading"
+            :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }"
+            class="font-mono"
+        >
+
+          <template #select-header="{ table }">
+            <u-checkbox
+                :model-value="table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate')"
+                aria-label="Select all"
+                @update:model-value="(val) => table.toggleAllPageRowsSelected(!!val)"
+            />
+          </template>
+
+          <template #select-cell="{ row }">
+            <u-checkbox
+                :model-value="row.getIsSelected()"
+                aria-label="Select row"
+                @update:model-value="(val) => row.toggleSelected(!!val)"
+            />
+          </template>
+
+          <template #key-cell="{ row }">
+            <div class="flex items-center gap-2 group">
+              <span v-if="editingKeyId !== row.original.id" class="font-medium">{{ row.getValue('key') }}</span>
+              <u-input 
+                v-else 
+                v-model="editingKeyName" 
+                size="xs" 
+                autofocus 
+                @keyup.enter="saveKeyName(row.original.id)" 
+                @keyup.esc="editingKeyId = null" 
+                @blur="saveKeyName(row.original.id)" 
+                @click.stop
+              />
+              <u-button 
+                v-if="editingKeyId !== row.original.id" 
+                icon="i-lucide-pencil" 
+                size="2xs" 
+                variant="ghost" 
+                color="neutral" 
+                class="opacity-0 group-hover:opacity-100 transition-opacity ml-2" 
+                @click="startEditingKey(row.original)" 
+              />
+            </div>
+          </template>
+
+          <template #conventions-cell="{ row }">
+            <div class="flex items-center">
+              <template v-if="validateKey(row.original.key).length === 0">
+                <u-badge color="success" variant="subtle" size="sm" class="opacity-70"><u-icon name="i-lucide-check-circle" class="mr-1 w-3 h-3" /> Valid</u-badge>
+              </template>
+              <template v-else>
+                <u-tooltip :text="validateKey(row.original.key).join(' • ')">
+                  <u-badge color="warning" variant="subtle" size="sm" class="cursor-help"><u-icon name="i-lucide-alert-triangle" class="mr-1 w-3 h-3" /> Invalid</u-badge>
+                </u-tooltip>
+              </template>
+            </div>
+          </template>
+
+          <template #labels-cell="{ row }">
+            <div class="flex gap-1 items-center flex-wrap group">
+              <template v-if="row.original.labels?.length">
+                <u-badge v-for="label in row.original.labels" :key="label.id" variant="subtle" color="neutral" size="md"
+                        :style="{ backgroundColor: `${label.color}20`, color: label.color, borderColor: `${label.color}20` }">
+                  {{ label.name }}
+                  <u-button icon="i-lucide-x" size="2xs" color="neutral" variant="ghost" :padded="false" class="ml-1 -mr-1 opacity-50 hover:opacity-100" @click.stop="removeLabelFromKey(row.original.id, label.id)" />
+                </u-badge>
+              </template>
+              
+              <u-popover>
+                <u-button icon="i-lucide-plus" size="2xs" color="neutral" variant="ghost" :class="row.original.labels?.length ? 'opacity-0 group-hover:opacity-100 transition-opacity' : 'opacity-60 hover:opacity-100 transition-opacity'" />
+                <template #content>
+                  <div class="p-2 flex flex-col gap-1 w-48">
+                    <span class="text-xs font-semibold text-neutral-400 mb-1 px-1">Add Label</span>
+                    <div v-if="projectLabels.filter(l => !row.original.labels?.some(rl => rl.id === l.id)).length === 0" class="text-xs text-neutral-500 px-1 italic">
+                      No available labels
+                    </div>
+                    <u-button 
+                      v-for="l in projectLabels.filter(l => !row.original.labels?.some(rl => rl.id === l.id))" 
+                      :key="l.id"
+                      size="xs"
+                      color="neutral"
+                      variant="ghost"
+                      class="justify-start w-full"
+                      @click="addLabelToKey(row.original.id, l.id)"
+                    >
+                      <div class="w-2 h-2 rounded-full" :style="{ backgroundColor: l.color }"></div>
+                      {{ l.name }}
+                    </u-button>
+                  </div>
+                </template>
+              </u-popover>
+            </div>
+          </template>
+        </u-table>
+      </div>
+
+      <!-- Mobile List -->
+      <div class="flex flex-col gap-3 md:hidden">
+        <u-card v-for="keyObj in paginatedKeysMobile" :key="keyObj.id" :ui="{ body: { padding: 'p-4' } }" class="cursor-pointer" @click="toggleSelection(keyObj)">
+          <div class="flex items-start gap-4">
+            <u-checkbox
+              class="mt-1"
+              :model-value="rowSelection[realKeys.indexOf(keyObj).toString()]"
+              @update:model-value="(val) => rowSelection[realKeys.indexOf(keyObj).toString()] = !!val"
+              @click.stop
+            />
+            <div class="flex flex-col flex-1 gap-2 min-w-0">
+              <div class="flex items-center justify-between gap-2">
+                <span v-if="editingKeyId !== keyObj.id" class="font-bold text-neutral-200 font-mono break-all text-sm">{{ keyObj.key }}</span>
+                <u-input 
+                  v-else 
+                  v-model="editingKeyName" 
+                  size="xs" 
+                  autofocus 
+                  @keyup.enter="saveKeyName(keyObj.id)" 
+                  @keyup.esc="editingKeyId = null" 
+                  @blur="saveKeyName(keyObj.id)" 
+                  @click.stop
+                />
+                <div class="flex items-center gap-2">
+                  <u-button 
+                    v-if="editingKeyId !== keyObj.id" 
+                    icon="i-lucide-pencil" 
+                    size="xs" 
+                    variant="ghost" 
+                    color="neutral" 
+                    @click.stop="startEditingKey(keyObj)" 
+                  />
+                  <div class="flex items-center">
+                    <template v-if="validateKey(keyObj.key).length === 0">
+                      <u-badge color="success" variant="subtle" size="xs" class="opacity-70"><u-icon name="i-lucide-check-circle" class="w-3 h-3" /></u-badge>
+                    </template>
+                    <template v-else>
+                      <u-tooltip :text="validateKey(keyObj.key).join(' • ')">
+                        <u-badge color="warning" variant="subtle" size="xs"><u-icon name="i-lucide-alert-triangle" class="w-3 h-3" /></u-badge>
+                      </u-tooltip>
+                    </template>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5 flex-wrap group">
+                <template v-if="keyObj.labels?.length">
+                  <u-badge v-for="label in keyObj.labels" :key="label.id" variant="subtle" color="neutral" size="xs"
+                          :style="{ backgroundColor: `${label.color}20`, color: label.color, borderColor: `${label.color}20` }">
+                    {{ label.name }}
+                    <u-button icon="i-lucide-x" size="2xs" color="neutral" variant="ghost" :padded="false" class="ml-1 -mr-1 opacity-50 hover:opacity-100" @click.stop="removeLabelFromKey(keyObj.id, label.id)" />
+                  </u-badge>
+                </template>
+
+                <u-popover>
+                  <u-button icon="i-lucide-plus" size="2xs" color="neutral" variant="ghost" @click.stop :class="keyObj.labels?.length ? '' : 'opacity-60 hover:opacity-100'" />
+                  <template #content>
+                    <div class="p-2 flex flex-col gap-1 w-48" @click.stop>
+                      <span class="text-xs font-semibold text-neutral-400 mb-1 px-1">Add Label</span>
+                      <div v-if="projectLabels.filter(l => !keyObj.labels?.some(rl => rl.id === l.id)).length === 0" class="text-xs text-neutral-500 px-1 italic">
+                        No available labels
+                      </div>
+                      <u-button 
+                        v-for="l in projectLabels.filter(l => !keyObj.labels?.some(rl => rl.id === l.id))" 
+                        :key="l.id"
+                        size="xs"
+                        color="neutral"
+                        variant="ghost"
+                        class="justify-start w-full"
+                        @click.stop="addLabelToKey(keyObj.id, l.id)"
+                      >
+                        <div class="w-2 h-2 rounded-full" :style="{ backgroundColor: l.color }"></div>
+                        {{ l.name }}
+                      </u-button>
+                    </div>
+                  </template>
+                </u-popover>
+              </div>
+            </div>
+          </div>
+        </u-card>
+        <div v-if="paginatedKeysMobile.length === 0" class="text-center py-8 text-neutral-500 text-sm">
+          No keys found.
+        </div>
+      </div>
+
+      <div class="flex justify-end border-t border-default pt-4 px-4">
+        <u-pagination
+            v-model:page="currentPagination"
+            :total="realKeys.length"
+            :items-per-page="pagination.pageSize"
+        />
+      </div>
+    </div>
+  </div>
+</template>

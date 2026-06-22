@@ -1,0 +1,137 @@
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { useConventions } from '~/composables/localization/useConventions'
+import GlossarySettings from '~/components/localization/conventions/GlossarySettings.vue'
+import KeyTemplatesSettings from '~/components/localization/conventions/KeyTemplatesSettings.vue'
+import type { KeyTemplateSegment } from '~/types'
+
+const route = useRoute()
+const projectId = parseInt(route.params.id as string)
+
+const {
+  templates,
+  glossary,
+  isLoading,
+  loadConventions,
+  addGlossaryTerm,
+  updateGlossaryTerm,
+  deleteGlossaryTerm,
+  addTemplate,
+  updateTemplate,
+  deleteTemplate,
+  variables,
+  addVariable,
+  updateVariable,
+  deleteVariable
+} = useConventions()
+
+const items = [{
+  label: 'Key Templates',
+  icon: 'i-lucide-layout-template',
+  slot: 'templates'
+}, {
+  label: 'Global Variables',
+  icon: 'i-lucide-database',
+  slot: 'variables'
+}, {
+  label: 'Glossary Linter',
+  icon: 'i-lucide-book-open-check',
+  slot: 'glossary'
+}]
+
+
+onMounted(() => {
+  if (projectId) {
+    loadConventions(projectId)
+  }
+})
+
+const handleAddGlossary = async (badWord: string, goodWord: string) => {
+  await addGlossaryTerm(projectId, badWord, goodWord)
+}
+
+const handleUpdateGlossary = async (id: number, badWord: string, goodWord: string) => {
+  await updateGlossaryTerm(projectId, id, badWord, goodWord)
+}
+
+const handleDeleteGlossary = async (id: number) => {
+  await deleteGlossaryTerm(projectId, id)
+}
+
+const handleAddVariable = async (name: string, options: string) => {
+  await addVariable(projectId, name, options)
+}
+
+const handleUpdateVariable = async (id: number, name: string, options: string) => {
+  await updateVariable(projectId, id, name, options)
+}
+
+const handleDeleteVariable = async (id: number) => {
+  await deleteVariable(projectId, id)
+}
+
+const handleAddTemplate = async (name: string, segments: KeyTemplateSegment[]) => {
+  await addTemplate(projectId, name, segments)
+}
+
+const handleUpdateTemplate = async (id: number, name: string, segments: KeyTemplateSegment[]) => {
+  await updateTemplate(projectId, id, name, segments)
+}
+
+const handleDeleteTemplate = async (id: number) => {
+  await deleteTemplate(projectId, id)
+}
+</script>
+
+<template>
+  <div class="flex flex-col gap-6">
+    <div class="flex flex-col md:flex-row justify-between gap-4">
+      <div>
+        <h1 class="text-xl font-bold">Conventions</h1>
+        <p class="text-sm text-neutral-400">Enforce naming rules and terminology across your translation keys.</p>
+      </div>
+    </div>
+    
+    <u-tabs 
+      :items="items" 
+      class="mt-4 w-full"
+      :ui="{ list: { background: 'bg-neutral-900 border border-neutral-800', width: 'w-fit', height: 'h-10', tab: { height: 'h-8', size: 'text-sm' } } }"
+    >
+      <template #templates="{ item }">
+        <div class="py-2">
+          <key-templates-settings 
+            :templates="templates"
+            :variables="variables"
+            :is-loading="isLoading"
+            @add="handleAddTemplate"
+            @update="handleUpdateTemplate"
+            @delete="handleDeleteTemplate"
+          />
+        </div>
+      </template>
+      <template #variables="{ item }">
+        <div class="py-2">
+          <variables-settings 
+            :variables="variables"
+            :is-loading="isLoading"
+            @add="handleAddVariable"
+            @update="handleUpdateVariable"
+            @delete="handleDeleteVariable"
+          />
+        </div>
+      </template>
+      <template #glossary="{ item }">
+        <div class="py-2">
+          <glossary-settings 
+            :glossary="glossary"
+            :is-loading="isLoading"
+            @add="handleAddGlossary"
+            @update="handleUpdateGlossary"
+            @delete="handleDeleteGlossary"
+          />
+        </div>
+      </template>
+    </u-tabs>
+  </div>
+</template>
