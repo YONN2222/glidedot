@@ -16,7 +16,6 @@ onMounted(() => {
 <template>
   <u-app>
     <NuxtLoadingIndicator color="var(--color-primary-500)" :height="3" />
-    <VitePwaManifest />
     <nuxt-layout>
       <nuxt-page/>
     </nuxt-layout>

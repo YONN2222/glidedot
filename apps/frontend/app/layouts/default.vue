@@ -199,8 +199,8 @@ watch(() => route.path, () => {
 </script>
 
 <template>
-  <div class="flex min-h-svh bg-black">
-    <u-sidebar class="hidden md:flex" v-model:open="isSidebarOpen" variant="inset" collapsible="icon" side="left" title="Navigation"
+  <div class="fixed inset-0 flex bg-black overflow-hidden">
+    <u-sidebar class="flex" v-model:open="isSidebarOpen" variant="inset" collapsible="icon" side="left" title="Navigation"
                :ui="{ header: 'min-h-none p-2' }">
 
       <template #header>
@@ -266,7 +266,7 @@ watch(() => route.path, () => {
       </template>
     </u-sidebar>
 
-    <div class="flex-1 flex flex-col overflow-clip md:rounded-xl md:ring md:ring-default bg-neutral-900 md:my-6 mb-0 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+    <div class="flex-1 flex flex-col overflow-y-auto overflow-x-hidden md:rounded-xl md:ring md:ring-default bg-neutral-900 md:my-6 relative">
 
       <div class="sticky top-0 z-40 bg-neutral-900/80 backdrop-blur-xl py-2 flex items-center px-4 border-b border-default space-x-4 pt-[max(0.5rem,env(safe-area-inset-top))]">
         <u-button
@@ -302,61 +302,5 @@ watch(() => route.path, () => {
       </div>
     </div>
 
-    <!-- Mobile Project Modal -->
-    <u-modal v-model:open="isMobileMenuOpen" class="md:hidden" title="Projects & Navigation">
-      <template #body>
-        <div class="p-2 flex-1 flex flex-col gap-2">
-          <u-navigation-menu 
-            :items="projects.map(p => ({ label: p.name, icon: 'i-lucide-folder', href: `/projects/${p.id}`, class: currentProject?.id === p.id ? '!text-primary bg-primary/10' : '' }))" 
-            orientation="vertical" 
-            :ui="{ link: 'p-2' }"
-          />
-          
-          <template v-if="isProjectContext">
-            <u-separator/>
-            <u-navigation-menu 
-              :items="secondaryItems" 
-              orientation="vertical" 
-              :ui="{ link: 'p-2' }"
-            />
-          </template>
-        </div>
-      </template>
-    </u-modal>
-
-    <!-- Mobile Settings Modal -->
-    <u-modal v-model:open="isSettingsMenuOpen" class="md:hidden" title="Settings & Profile">
-      <template #body>
-        <div class="p-2 flex-1 flex flex-col gap-2">
-          <u-navigation-menu 
-            :items="[
-              { label: 'Account', icon: 'i-lucide-user', href: '/settings/account' },
-              { label: 'Settings', icon: 'i-lucide-cog', href: '/settings' },
-              { label: 'Logout', icon: 'i-lucide-log-out', href: '/logout' }
-            ]" 
-            orientation="vertical" 
-            :ui="{ link: 'p-2' }"
-          />
-        </div>
-      </template>
-    </u-modal>
-
-    <!-- Mobile Bottom Navigation -->
-    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-xl border-t border-default z-50 pb-[env(safe-area-inset-bottom)]">
-      <div class="flex justify-around items-center h-16 px-2">
-        <nuxt-link to="/" class="flex flex-col items-center justify-center w-full h-full text-muted hover:text-primary transition-colors" exact-active-class="!text-primary">
-          <u-icon name="i-lucide-house" class="w-6 h-6 mb-1" />
-          <span class="text-[10px] font-medium">Home</span>
-        </nuxt-link>
-        <button @click="isMobileMenuOpen = true" class="flex flex-col items-center justify-center w-full h-full text-muted hover:text-primary transition-colors" :class="isProjectContext ? '!text-primary' : ''">
-          <u-icon name="i-lucide-folder" class="w-6 h-6 mb-1" />
-          <span class="text-[10px] font-medium">Project</span>
-        </button>
-        <button @click="isSettingsMenuOpen = true" class="flex flex-col items-center justify-center w-full h-full text-muted hover:text-primary transition-colors" :class="route.path.startsWith('/settings') ? '!text-primary' : ''">
-          <u-icon name="i-lucide-settings" class="w-6 h-6 mb-1" />
-          <span class="text-[10px] font-medium">Settings</span>
-        </button>
-      </div>
-    </div>
   </div>
 </template>

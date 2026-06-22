@@ -93,7 +93,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-8 max-w-7xl mx-auto py-4">
+  <div class="flex flex-col gap-8 w-full py-4">
     <!-- Header -->
     <div class="flex flex-col gap-1">
       <h1 class="text-2xl font-bold">Welcome back, {{ user?.username || 'User' }}!</h1>

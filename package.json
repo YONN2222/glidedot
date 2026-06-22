@@ -2,16 +2,14 @@
   "name": "glidedot",
   "private": true,
   "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "lint": "turbo run lint"
+    "build": "bun --filter='*' run build",
+    "dev": "docker-compose up --build",
+    "lint": "bun --filter='*' run lint"
   },
   "devDependencies": {
-    "turbo": "latest",
     "typescript": "latest"
   },
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "apps/*"
   ]
 }

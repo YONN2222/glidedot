@@ -21,8 +21,7 @@ export default defineNuxtConfig({
       '@nuxt/ui',
       'nuxt-oidc-auth',
       '@nuxt/content',
-      '@comark/nuxt',
-      '@vite-pwa/nuxt'
+      '@comark/nuxt'
     ],
     icon: {
       provider: 'server',
@@ -31,33 +30,7 @@ export default defineNuxtConfig({
         collections: ['lucide']
       }
     },
-    pwa: {
-        registerType: 'autoUpdate',
-        manifest: {
-            name: 'Glide',
-            short_name: 'Glide',
-            theme_color: '#141417',
-            background_color: '#141417',
-            display: 'standalone',
-            icons: [
-                {
-                    src: '/icon.svg',
-                    sizes: '512x512',
-                    type: 'image/svg+xml',
-                    purpose: 'any maskable'
-                }
-            ]
-        },
-        workbox: {
-            navigateFallback: '/',
-            globPatterns: ['**/*.{js,css,html,png,svg,ico}']
-        },
-        devOptions: {
-            enabled: true,
-            type: 'module',
-            suppressWarnings: true
-        }
-    },
+
     oidc: {
         defaultProvider: 'oidc',
         providers: {

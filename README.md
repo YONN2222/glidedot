@@ -34,7 +34,7 @@ glide. uses SQLite and Fastify to ensure reliable performance. With features lik
 
 ## ⚙️ Tech Stack
 
-glide. is structured as a monorepo (powered by Turborepo) and uses the following technologies:
+glide. is structured as a monorepo (powered by Bun Workspaces) and uses the following technologies:
 
 - **Runtime & Package Manager:** [Bun](https://bun.sh/)
 - **Frontend (`apps/frontend`):** [Nuxt](https://nuxt.com/) (Vue.js) + Tailwind CSS / Nuxt UI
@@ -65,7 +65,6 @@ glidedot/
 │   ├── backend/        # Fastify API, Drizzle ORM schemas, Cron jobs
 │   └── frontend/       # Nuxt App, Pages, UI Components
 ├── docker-compose.yml  # Production Orchestration
-├── turbo.json          # Monorepo pipeline configuration
 └── bun.lockb           # Lockfile (DO NOT DELETE)
 ```
 

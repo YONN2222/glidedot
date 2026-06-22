@@ -28,14 +28,7 @@ const isOpen = computed({
           <u-input v-model="project.name" placeholder="e.g. Mobile App" class="w-full" autofocus @keyup.enter="emit('save')" />
         </u-form-field>
 
-        <u-form-field v-if="mode === 'edit'" label="Source Language (Optional)">
-          <u-select
-            v-model="project.sourceLanguageId"
-            :items="languages.map(l => ({ label: l.name, value: l.id }))"
-            placeholder="Select source language"
-            class="w-full"
-          />
-        </u-form-field>
+
 
         <u-form-field v-if="mode === 'edit'" label="In-Context Preview URL" description="URL where your app is running to enable live visual editing.">
           <u-input v-model="project.inContextUrl" placeholder="https://staging.myapp.com" class="w-full" @keyup.enter="emit('save')" />
