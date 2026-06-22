@@ -40,10 +40,18 @@ export default defineNuxtRouteMiddleware(async (to, _from) => {
   }
 
   // If not logged in, try fetching user first
+  let currentUser = undefined
   if (!isLoggedIn.value) {
-    const user = await fetchUser()
-    if (!user) {
+    currentUser = await fetchUser()
+    if (!currentUser) {
       return navigateTo('/login')
     }
+  } else {
+    currentUser = useAuth().user.value
+  }
+
+  // Admin route protection
+  if (to.path.startsWith('/admin') && !currentUser?.isAdmin) {
+    return navigateTo('/')
   }
 })

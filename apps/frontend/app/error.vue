@@ -26,9 +26,9 @@ if (import.meta.server) {
   <NuxtLayout name="error">
     <div class="flex flex-col justify-center items-center space-y-4 w-full px-4">
       <div class="flex items-center justify-center mb-4 mt-8">
-        <div class="text-5xl font-black tracking-tighter text-white font-sans flex items-baseline">
+        <div class="font-black tracking-tighter text-white font-sans flex items-baseline transition-all" :style="{ fontSize: ((settings?.logoSize || 24) * 2) + 'px' }">
           <template v-if="settings?.logoType === 'image'">
-            <img :src="settings.logoUrlMinimal || settings.logoUrl" alt="Logo" class="h-14 w-auto max-w-[200px] object-contain shrink-0" >
+            <img :src="settings.logoUrlMinimal || settings.logoUrl" alt="Logo" class="w-auto max-w-[200px] object-contain shrink-0 transition-all" :style="{ height: ((settings?.logoSize || 24) * 2) + 'px' }">
           </template>
           <template v-else>
             {{ settings?.logoText || 'glide' }}<span v-if="settings?.logoShowDot !== 'false'" class="text-primary-500">.</span>

@@ -1,15 +1,12 @@
 <template>
   <div class="flex flex-col gap-8 max-w-6xl w-full">
     <!-- Header -->
-    <div class="flex flex-col gap-4 md:flex-row md:items-end justify-between">
+    <div class="flex flex-col gap-4">
       <div class="flex flex-col gap-2">
-        <h1 class="text-3xl font-bold text-neutral-100 tracking-tight">API Documentation</h1>
-        <p class="text-base text-neutral-400 max-w-2xl">
+        <h1 class="text-3xl font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">API Documentation</h1>
+        <p class="text-base text-neutral-500 dark:text-neutral-400 max-w-2xl">
           A comprehensive guide to all endpoints available in the Glide Backend. Use this documentation to seamlessly integrate with our platform.
         </p>
-      </div>
-      <div class="w-full md:w-80 shrink-0">
-        <u-input v-model="searchQuery" icon="i-lucide-search" placeholder="Search endpoints, parameters..." size="md" />
       </div>
     </div>
 
@@ -18,35 +15,39 @@
       
       <!-- Sidebar Navigation -->
       <div class="lg:col-span-1">
-        <u-card class="sticky top-24 bg-[#141417] border border-neutral-800 shadow-xl rounded-xl max-h-[calc(100vh-8rem)] overflow-y-auto" :ui="{ body: { padding: 'p-3' } }">
-          <div class="flex flex-col gap-2">
-            <h3 class="text-xs font-bold text-neutral-500 uppercase tracking-wider px-3 py-1">Categories</h3>
-            <nav class="flex flex-col gap-1">
+        <u-card class="sticky top-24 shadow-xl rounded-xl max-h-[calc(100vh-8rem)] overflow-y-auto" :ui="{ body: { padding: 'p-3' } }">
+          <div class="flex flex-col gap-4">
+            <u-input v-model="searchQuery" icon="i-lucide-search" placeholder="Search endpoints..." size="sm" class="w-full" />
+            
+            <div class="flex flex-col gap-1">
+              <h3 class="text-xs font-bold text-neutral-500 uppercase tracking-wider px-3 py-1">Categories</h3>
+              <nav class="flex flex-col gap-1">
               <a v-for="page in sortedPages" :key="page.path" :href="'#' + sanitize(page.title)" 
                  :class="[
                    'px-3 py-2 rounded-lg text-sm font-medium transition-all',
                    activeSection === sanitize(page.title) 
-                     ? 'bg-primary-500/10 text-primary-400' 
-                     : 'text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200'
+                     ? 'bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-400' 
+                     : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200'
                  ]">
                 {{ page.title }}
               </a>
-            </nav>
+              </nav>
+            </div>
           </div>
         </u-card>
       </div>
 
       <!-- Endpoints Details -->
       <div class="lg:col-span-3 flex flex-col gap-16">
-        <div v-if="sortedPages.length === 0" class="flex flex-col items-center justify-center p-12 text-center border border-neutral-800 border-dashed rounded-xl">
-          <u-icon name="i-lucide-search-x" class="w-12 h-12 text-neutral-600 mb-4" />
-          <h3 class="text-lg font-medium text-neutral-300">No matching endpoints found</h3>
+        <div v-if="sortedPages.length === 0" class="flex flex-col items-center justify-center p-12 text-center border border-neutral-200 dark:border-neutral-800 border-dashed rounded-xl">
+          <u-icon name="i-lucide-search-x" class="w-12 h-12 text-neutral-400 dark:text-neutral-600 mb-4" />
+          <h3 class="text-lg font-medium text-neutral-700 dark:text-neutral-300">No matching endpoints found</h3>
           <p class="text-sm text-neutral-500 mt-1">Try a different search term or clear the search to see all endpoints.</p>
         </div>
       
         <div v-for="page in sortedPages" :key="page.path" :id="sanitize(page.title)" class="api-section scroll-mt-24 flex flex-col gap-4">
-          <u-card class="bg-[#141417]/50 border border-neutral-800 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-            <div class="prose prose-invert prose-primary max-w-none p-4 md:p-8 prose-headings:text-neutral-100 prose-h1:text-3xl prose-h2:text-xl prose-h2:font-semibold prose-h2:border-b prose-h2:border-neutral-800 prose-h2:pb-3 prose-h2:mt-12 prose-h3:text-lg prose-h3:mt-8 prose-p:text-neutral-400 prose-a:text-primary-400 [&_a:hover]:text-primary-300 prose-strong:text-white prose-code:text-primary-300 prose-code:bg-primary-900/20 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-[#0f0f11] prose-pre:border prose-pre:border-neutral-800 prose-pre:mt-4 prose-hr:border-neutral-800/60 prose-hr:my-10">
+          <u-card class="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+            <div class="prose dark:prose-invert prose-primary max-w-none p-4 md:p-8 prose-headings:text-neutral-900 dark:prose-headings:text-neutral-100 prose-h1:text-3xl prose-h2:text-xl prose-h2:font-semibold prose-h2:border-b prose-h2:border-neutral-200 dark:prose-h2:border-neutral-800 prose-h2:pb-3 prose-h2:mt-12 prose-h3:text-lg prose-h3:mt-8 prose-p:text-neutral-600 dark:prose-p:text-neutral-400 prose-a:text-neutral-900 dark:prose-a:text-white prose-a:font-normal [&_a:hover]:text-neutral-600 dark:[&_a:hover]:text-neutral-300 prose-strong:text-neutral-900 dark:prose-strong:text-white prose-code:text-primary-600 dark:prose-code:text-primary-300 prose-code:bg-primary-50 dark:prose-code:bg-primary-900/20 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-neutral-50 dark:prose-pre:bg-[#0f0f11] prose-pre:border prose-pre:border-neutral-200 dark:prose-pre:border-neutral-800 prose-pre:mt-4 prose-hr:border-neutral-200 dark:prose-hr:border-neutral-800/60 prose-hr:my-10">
               <content-renderer :value="page" />
             </div>
           </u-card>

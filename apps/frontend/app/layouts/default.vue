@@ -73,14 +73,20 @@ const primaryItems: ComputedRef<NavigationMenuItem[]> = computed(() => {
       label: 'Projects',
       icon: 'i-lucide-layout-dashboard',
       defaultOpen: route.path.startsWith('/projects'),
-      children: [
+      children: projects.value.length > 0 ? [
         ...projects.value.map(project => ({
           label: project.name,
           icon: 'i-lucide-folder',
           href: `/projects/${project.id}`,
           class: currentProject.value?.id === project.id ? '!text-primary !bg-transparent font-medium' : ''
         }))
-      ]
+      ] : (isAdmin.value ? [
+        {
+          label: 'Create Project',
+          icon: 'i-lucide-plus',
+          href: '/admin/projects'
+        }
+      ] : [])
     },
   ]
 
@@ -121,6 +127,11 @@ const primaryItems: ComputedRef<NavigationMenuItem[]> = computed(() => {
           icon: 'i-lucide-settings',
           defaultOpen: route.path.startsWith('/admin/settings'),
           children: [
+            {
+              label: 'General',
+              icon: 'i-lucide-sliders',
+              href: '/admin/settings'
+            },
             {
               label: 'Theming',
               icon: 'i-lucide-palette',
@@ -207,17 +218,17 @@ watch(() => route.path, () => {
         <div class="flex flex-col items-center w-full">
           <div class="flex flex-row items-center">
             <a href="/" class="flex items-center justify-center py-2 px-1">
-              <div v-if="isSidebarOpen" class="text-3xl font-black tracking-tighter text-white font-sans flex items-baseline">
+              <div v-if="isSidebarOpen" class="font-black tracking-tighter text-white font-sans flex items-baseline transition-all" :style="{ fontSize: (settings.logoSize || 24) + 'px' }">
                 <template v-if="settings.logoType === 'image'">
-                  <img :src="settings.logoUrl" alt="Logo" class="h-6 w-auto object-contain shrink-0" >
+                  <img :src="settings.logoUrl" alt="Logo" class="w-auto object-contain shrink-0 transition-all" :style="{ height: (settings.logoSize || 24) + 'px' }">
                 </template>
                 <template v-else>
                   {{ settings.logoText || 'glide' }}<span v-if="settings.logoShowDot !== 'false'" class="text-primary-500">.</span>
                 </template>
               </div>
-              <div v-else class="text-2xl font-black tracking-tighter text-white font-sans flex items-baseline">
+              <div v-else class="font-black tracking-tighter text-white font-sans flex items-baseline transition-all" :style="{ fontSize: (Math.max(16, (settings.logoSize || 24) - 4)) + 'px' }">
                 <template v-if="settings.logoType === 'image'">
-                  <img :src="settings.logoUrlMinimal || settings.logoUrl" alt="Logo" class="h-6 w-auto object-contain shrink-0" >
+                  <img :src="settings.logoUrlMinimal || settings.logoUrl" alt="Logo" class="w-auto object-contain shrink-0 transition-all" :style="{ height: (Math.max(16, (settings.logoSize || 24) - 4)) + 'px' }">
                 </template>
                 <template v-else>
                   {{ settings.logoTextMinimal || 'g' }}<span v-if="settings.logoShowDot !== 'false'" class="text-primary-500">.</span>

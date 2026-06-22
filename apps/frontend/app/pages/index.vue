@@ -156,7 +156,7 @@ onUnmounted(() => {
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         <!-- Productivity Chart (Takes up 1 column) -->
-        <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-4 h-full">
           <h2 class="text-lg font-semibold flex items-center gap-2">
             <u-icon name="i-lucide-activity" class="w-5 h-5 text-neutral-400" />
             Your Activity (Last 168 Days)
@@ -198,15 +198,15 @@ onUnmounted(() => {
           </u-card>
         </div>
         <!-- Recently Edited Projects (Takes up 1 column) -->
-        <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-4 h-full">
           <h2 class="text-lg font-semibold flex items-center gap-2">
             <u-icon name="i-lucide-history" class="w-5 h-5 text-neutral-400" />
             Recently Edited
           </h2>
           
-          <u-card :ui="{ body: 'p-0 sm:p-0' }">
+          <u-card :ui="{ body: 'p-0 sm:p-0 h-full flex flex-col' }" class="flex-1 flex flex-col">
             <template v-if="!stats.recentProjects || stats.recentProjects.length === 0">
-              <div class="p-6 text-center text-sm text-neutral-500 flex flex-col items-center gap-2">
+              <div class="flex-1 flex flex-col items-center justify-center p-6 text-center text-sm text-neutral-500 gap-2 min-h-[160px]">
                 <u-icon name="i-lucide-ghost" class="w-8 h-8 text-neutral-600" />
                 No recent activity.
               </div>

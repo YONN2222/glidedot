@@ -23,6 +23,18 @@ export default defineNuxtConfig({
       '@nuxt/content',
       '@comark/nuxt'
     ],
+    content: {
+      build: {
+        markdown: {
+          highlight: {
+            theme: {
+              default: 'github-light',
+              dark: 'github-dark'
+            }
+          }
+        }
+      }
+    },
     icon: {
       provider: 'server',
       fallbackToApi: false,
