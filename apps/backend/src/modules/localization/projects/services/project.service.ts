@@ -280,8 +280,50 @@ export class ProjectService {
 
     async getDashboardStats(user: { id: number; isAdmin: boolean }) {
         const accessibleProjects = await this.getAll(user);
+        
+        // Always calculate personal stats
+        const personalLogs = await this.db.select({ 
+            action: activityLogs.action,
+            createdAt: activityLogs.createdAt
+        }).from(activityLogs).where(eq(activityLogs.userId, user.id));
+
+        const now = new Date();
+        const lastDays = new Map<string, number>();
+        for (let i = 167; i >= 0; i--) {
+            const d = new Date(now);
+            d.setDate(d.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            lastDays.set(dateStr, 0);
+        }
+
+        personalLogs.forEach(log => {
+            const d = new Date(log.createdAt);
+            const iso = d.toISOString().split('T')[0];
+            if (lastDays.has(iso)) {
+                lastDays.set(iso, lastDays.get(iso)! + 1);
+            }
+        });
+        
+        const activityHeatmap: { date: string; count: number }[] = [];
+        lastDays.forEach((count, date) => {
+            activityHeatmap.push({ date, count });
+        });
+
+        const personalStats = {
+            keysCreated: personalLogs.filter(l => l.action === 'KEY_CREATED').length,
+            translationsUpdated: personalLogs.filter(l => l.action === 'TRANSLATION_UPDATED').length,
+            languagesAdded: personalLogs.filter(l => l.action === 'LANGUAGE_ADDED').length,
+            labelsCreated: personalLogs.filter(l => l.action === 'LABEL_CREATED').length,
+            activityHeatmap
+        };
+
         if (!accessibleProjects.length) {
-            return { globalStats: { totalProjects: 0, totalKeys: 0, totalLanguages: 0, totalTranslations: 0, overallProgress: 0 }, projects: [] };
+            return { 
+                globalStats: { totalProjects: 0, totalKeys: 0, totalLanguages: 0, totalTranslations: 0, overallProgress: 0 }, 
+                projects: [],
+                recentProjects: [],
+                personalStats
+            };
         }
 
         const projectIds = accessibleProjects.map(p => p.id);
@@ -351,42 +393,6 @@ export class ProjectService {
             .slice(0, 3);
 
         const overallProgress = expectedTranslations === 0 ? 0 : Math.floor((totalTranslations / expectedTranslations) * 100);
-
-        // Fetch personal stats for the current user
-        const personalLogs = await this.db.select({ 
-            action: activityLogs.action,
-            createdAt: activityLogs.createdAt
-        }).from(activityLogs).where(eq(activityLogs.userId, user.id));
-
-        const now = new Date();
-        const lastDays = new Map<string, number>();
-        for (let i = 167; i >= 0; i--) {
-            const d = new Date(now);
-            d.setDate(d.getDate() - i);
-            const dateStr = d.toISOString().split('T')[0];
-            lastDays.set(dateStr, 0);
-        }
-
-        personalLogs.forEach(log => {
-            const d = new Date(log.createdAt);
-            const iso = d.toISOString().split('T')[0];
-            if (lastDays.has(iso)) {
-                lastDays.set(iso, lastDays.get(iso)! + 1);
-            }
-        });
-        
-        const activityHeatmap: { date: string; count: number }[] = [];
-        lastDays.forEach((count, date) => {
-            activityHeatmap.push({ date, count });
-        });
-
-        const personalStats = {
-            keysCreated: personalLogs.filter(l => l.action === 'KEY_CREATED').length,
-            translationsUpdated: personalLogs.filter(l => l.action === 'TRANSLATION_UPDATED').length,
-            languagesAdded: personalLogs.filter(l => l.action === 'LANGUAGE_ADDED').length,
-            labelsCreated: personalLogs.filter(l => l.action === 'LABEL_CREATED').length,
-            activityHeatmap
-        };
 
         return {
             globalStats: {

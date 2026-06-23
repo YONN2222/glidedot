@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, computed, onUnmounted, reactive } from 'vue'
 import { useSettings } from '~/composables/useSettings'
 import { useToast, useAppConfig } from '#imports'
+import UnsavedChangesAlert from '~/components/UnsavedChangesAlert.vue'
 
 const { settings, loadSettings, saveSettings } = useSettings()
 const toast = useToast()
@@ -18,7 +19,8 @@ const formData = ref({
   logoTextMinimal: 'g',
   logoShowDot: true,
   logoUrl: '',
-  logoUrlMinimal: ''
+  logoUrlMinimal: '',
+  logoSize: 24
 })
 
 const themes = [
@@ -57,10 +59,43 @@ const applyHexInput = () => {
   }
 }
 
-const originalState = {
+const originalState = reactive({
   primary: appConfig.ui.colors.primary,
   themeMode: settings.value.themeMode || 'dark',
-  customBg: settings.value.customBackgroundColor || '#111111'
+  customBg: settings.value.customBackgroundColor || '#111111',
+  logoType: settings.value.logoType || 'text',
+  logoText: settings.value.logoText || 'glide',
+  logoTextMinimal: settings.value.logoTextMinimal || 'g',
+  logoShowDot: settings.value.logoShowDot || 'true',
+  logoUrl: settings.value.logoUrl || '',
+  logoUrlMinimal: settings.value.logoUrlMinimal || '',
+  logoSize: settings.value.logoSize || '24'
+})
+
+const hasUnsavedChanges = computed(() => {
+  return formData.value.primaryColor !== originalState.primary ||
+         formData.value.themeMode !== originalState.themeMode ||
+         formData.value.customBackgroundColor !== originalState.customBg ||
+         formData.value.logoType !== originalState.logoType ||
+         formData.value.logoText !== originalState.logoText ||
+         formData.value.logoTextMinimal !== originalState.logoTextMinimal ||
+         formData.value.logoShowDot !== (originalState.logoShowDot === 'true') ||
+         formData.value.logoUrl !== originalState.logoUrl ||
+         formData.value.logoUrlMinimal !== originalState.logoUrlMinimal ||
+         String(formData.value.logoSize) !== originalState.logoSize
+})
+
+const discard = () => {
+  formData.value.primaryColor = originalState.primary
+  formData.value.themeMode = originalState.themeMode
+  formData.value.customBackgroundColor = originalState.customBg
+  formData.value.logoType = originalState.logoType
+  formData.value.logoText = originalState.logoText
+  formData.value.logoTextMinimal = originalState.logoTextMinimal
+  formData.value.logoShowDot = originalState.logoShowDot === 'true'
+  formData.value.logoUrl = originalState.logoUrl
+  formData.value.logoUrlMinimal = originalState.logoUrlMinimal
+  formData.value.logoSize = Number(originalState.logoSize)
 }
 
 let isSaved = false
@@ -77,8 +112,16 @@ watch(() => formData.value.customBackgroundColor, (val) => {
   settings.value.customBackgroundColor = val
 })
 
+watch(() => formData.value.logoType, (val) => { settings.value.logoType = val })
+watch(() => formData.value.logoText, (val) => { settings.value.logoText = val })
+watch(() => formData.value.logoTextMinimal, (val) => { settings.value.logoTextMinimal = val })
+watch(() => formData.value.logoShowDot, (val) => { settings.value.logoShowDot = val ? 'true' : 'false' })
+watch(() => formData.value.logoUrl, (val) => { settings.value.logoUrl = val })
+watch(() => formData.value.logoUrlMinimal, (val) => { settings.value.logoUrlMinimal = val })
+watch(() => formData.value.logoSize, (val) => { settings.value.logoSize = String(val) })
+
 onMounted(async () => {
-  await loadSettings()
+  await loadSettings(true)
   formData.value.primaryColor = settings.value.primaryColor || 'rose'
   
   originalState.primary = appConfig.ui.colors.primary
@@ -98,6 +141,7 @@ onMounted(async () => {
   formData.value.logoShowDot = settings.value.logoShowDot !== 'false' // default true
   formData.value.logoUrl = settings.value.logoUrl || ''
   formData.value.logoUrlMinimal = settings.value.logoUrlMinimal || ''
+  formData.value.logoSize = Number(settings.value.logoSize) || 24
 })
 
 onUnmounted(() => {
@@ -105,6 +149,13 @@ onUnmounted(() => {
     appConfig.ui.colors.primary = originalState.primary
     settings.value.themeMode = originalState.themeMode
     settings.value.customBackgroundColor = originalState.customBg
+    settings.value.logoType = originalState.logoType
+    settings.value.logoText = originalState.logoText
+    settings.value.logoTextMinimal = originalState.logoTextMinimal
+    settings.value.logoShowDot = originalState.logoShowDot
+    settings.value.logoUrl = originalState.logoUrl
+    settings.value.logoUrlMinimal = originalState.logoUrlMinimal
+    settings.value.logoSize = originalState.logoSize
   }
 })
 
@@ -119,7 +170,8 @@ const save = async () => {
     logoTextMinimal: formData.value.logoTextMinimal,
     logoShowDot: formData.value.logoShowDot ? 'true' : 'false',
     logoUrl: formData.value.logoUrl,
-    logoUrlMinimal: formData.value.logoUrlMinimal
+    logoUrlMinimal: formData.value.logoUrlMinimal,
+    logoSize: String(formData.value.logoSize)
   })
   isLoading.value = false
   if (success) {
@@ -127,6 +179,13 @@ const save = async () => {
     originalState.primary = formData.value.primaryColor
     originalState.themeMode = formData.value.themeMode
     originalState.customBg = formData.value.customBackgroundColor
+    originalState.logoType = formData.value.logoType
+    originalState.logoText = formData.value.logoText
+    originalState.logoTextMinimal = formData.value.logoTextMinimal
+    originalState.logoShowDot = formData.value.logoShowDot ? 'true' : 'false'
+    originalState.logoUrl = formData.value.logoUrl
+    originalState.logoUrlMinimal = formData.value.logoUrlMinimal
+    originalState.logoSize = String(formData.value.logoSize)
     toast.add({ title: 'Settings saved', color: 'success' })
   } else {
     toast.add({ title: 'Failed to save settings', color: 'error' })
@@ -292,8 +351,31 @@ const save = async () => {
               <u-input v-model="formData.logoUrlMinimal" size="lg" class="w-full" icon="i-lucide-link" placeholder="https://example.com/icon.svg" />
             </u-form-field>
           </template>
+
+          <u-form-field label="Logo Size" description="Adjust the size of the logo across the application.">
+            <div class="flex items-center gap-4 w-full mt-2">
+              <u-slider v-model="formData.logoSize" :min="16" :max="64" :step="1" class="flex-1" />
+              <span class="text-sm font-medium w-8 text-right">{{ formData.logoSize }}px</span>
+              <u-button 
+                icon="i-lucide-rotate-ccw" 
+                color="neutral" 
+                variant="ghost" 
+                size="sm" 
+                :disabled="formData.logoSize === 24"
+                @click="formData.logoSize = 24" 
+                title="Reset to default"
+              />
+            </div>
+          </u-form-field>
         </div>
       </u-card>
     </div>
+
+    <unsaved-changes-alert 
+      :has-unsaved-changes="hasUnsavedChanges" 
+      :loading="isLoading" 
+      @save="save" 
+      @discard="discard" 
+    />
   </div>
 </template>

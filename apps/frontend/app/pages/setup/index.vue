@@ -1,5 +1,8 @@
 <script setup lang="ts">
 const { fetchApi } = useApi()
+const { settings, loadSettings } = useSettings()
+await loadSettings()
+
 const step = ref(1)
 const loading = ref(false)
 
@@ -50,7 +53,14 @@ const goToLogin = () => {
     <div class="max-w-md w-full bg-neutral-900 border border-neutral-800 rounded-2xl p-8 space-y-8 shadow-2xl">
 
       <div class="flex flex-col items-center">
-        <nuxt-img src="/img/logo.png" class="w-20 mb-6"/>
+        <div class="font-black tracking-tighter text-white font-sans flex items-baseline mb-6 transition-all" :style="{ fontSize: ((settings.logoSize || 24) * 2) + 'px' }">
+          <template v-if="settings.logoType === 'image'">
+            <img :src="settings.logoUrlMinimal || settings.logoUrl" alt="Logo" class="w-auto max-w-[200px] object-contain shrink-0 transition-all" :style="{ height: ((settings.logoSize || 24) * 2) + 'px' }">
+          </template>
+          <template v-else>
+            {{ settings.logoText || 'glide' }}<span v-if="settings.logoShowDot !== 'false'" class="text-primary-500">.</span>
+          </template>
+        </div>
         <h1 class="text-2xl font-bold text-white">Setup Wizard</h1>
         <p class="text-neutral-400 text-center mt-2 px-4">Welcome to Glide! Let's get your environment ready in just a few steps.</p>
       </div>

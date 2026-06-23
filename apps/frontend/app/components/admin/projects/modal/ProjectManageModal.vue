@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { Project } from '~/types'
+import UnsavedChangesAlert from '~/components/UnsavedChangesAlert.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -18,6 +19,18 @@ const isOpen = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val)
 })
+
+const originalProject = ref('')
+watch(() => props.modelValue, (newVal) => {
+  if (newVal) {
+    originalProject.value = JSON.stringify(props.project)
+  }
+})
+
+const hasUnsavedChanges = computed(() => {
+  if (props.mode === 'create') return false
+  return JSON.stringify(props.project) !== originalProject.value
+})
 </script>
 
 <template>
@@ -28,14 +41,7 @@ const isOpen = computed({
           <u-input v-model="project.name" placeholder="e.g. Mobile App" class="w-full" autofocus @keyup.enter="emit('save')" />
         </u-form-field>
 
-        <u-form-field v-if="mode === 'edit'" label="Source Language (Optional)">
-          <u-select
-            v-model="project.sourceLanguageId"
-            :items="languages.map(l => ({ label: l.name, value: l.id }))"
-            placeholder="Select source language"
-            class="w-full"
-          />
-        </u-form-field>
+
 
         <u-form-field v-if="mode === 'edit'" label="In-Context Preview URL" description="URL where your app is running to enable live visual editing.">
           <u-input v-model="project.inContextUrl" placeholder="https://staging.myapp.com" class="w-full" @keyup.enter="emit('save')" />
@@ -64,6 +70,11 @@ const isOpen = computed({
         <u-button color="neutral" variant="ghost" label="Cancel" @click="isOpen = false" />
         <u-button :label="mode === 'create' ? 'Create Project' : 'Save Changes'" color="neutral" :disabled="!project.name?.trim()" @click="emit('save')" />
       </div>
+
+      <unsaved-changes-alert 
+        :has-unsaved-changes="hasUnsavedChanges" 
+        :hide-buttons="true"
+      />
     </template>
   </u-modal>
 </template>

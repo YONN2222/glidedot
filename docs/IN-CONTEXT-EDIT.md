@@ -10,6 +10,10 @@ To enable the In-Context Editor on your own website, simply embed the `glide-cli
 <script src="https://your-glide-instance.com/glide-client.js"></script>
 ```
 
+> [!IMPORTANT]
+> **Iframe Embedding Required**  
+> Because the In-Context Editor embeds your website within an `<iframe>` inside the glide. dashboard, your web application must allow being framed. Ensure that security headers like `X-Frame-Options` or `Content-Security-Policy` (CSP) permit embedding from your glide. instance URL. Otherwise, the editor will fail to load and might show a "Connection refused" error.
+
 ## 2. Formatting your Keys
 The script automatically scans your website for localization keys and replaces them with live translations.
 You can provide keys in two ways:

@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem, NavigationMenuItem, BreadcrumbItem } from '@nuxt/ui'
 import type { Project } from '~/types'
-import { useThemeColor } from '~/composables/useThemeColor'
-import { useThemeBackground } from '~/composables/useThemeBackground'
 
 const route = useRoute();
 const { fetchApi, isApiLoading } = useApi()
@@ -10,17 +8,11 @@ const { user, isAdmin } = useAuth()
 const { settings, loadSettings } = useSettings()
 const appConfig = useAppConfig()
 
-useThemeColor(computed(() => appConfig.ui.colors.primary))
-useThemeBackground(computed(() => settings.value.themeMode || 'dark'), computed(() => settings.value.customBackgroundColor || '#111111'))
+
 
 await loadSettings()
 
-// Apply Theming Settings
-onMounted(() => {
-  if (settings.value.primaryColor) {
-    appConfig.ui.colors.primary = settings.value.primaryColor
-  }
-})
+
 
 const { data: projectsData } = await useAsyncData('projects', () => fetchApi('/localization/projects'))
 const projects = computed<Project[]>(() => (projectsData.value as Project[]) || [])
@@ -73,14 +65,20 @@ const primaryItems: ComputedRef<NavigationMenuItem[]> = computed(() => {
       label: 'Projects',
       icon: 'i-lucide-layout-dashboard',
       defaultOpen: route.path.startsWith('/projects'),
-      children: [
+      children: projects.value.length > 0 ? [
         ...projects.value.map(project => ({
           label: project.name,
           icon: 'i-lucide-folder',
           href: `/projects/${project.id}`,
           class: currentProject.value?.id === project.id ? '!text-primary !bg-transparent font-medium' : ''
         }))
-      ]
+      ] : (isAdmin.value ? [
+        {
+          label: 'Create Project',
+          icon: 'i-lucide-plus',
+          href: '/admin/projects'
+        }
+      ] : [])
     },
   ]
 
@@ -121,6 +119,11 @@ const primaryItems: ComputedRef<NavigationMenuItem[]> = computed(() => {
           icon: 'i-lucide-settings',
           defaultOpen: route.path.startsWith('/admin/settings'),
           children: [
+            {
+              label: 'General',
+              icon: 'i-lucide-sliders',
+              href: '/admin/settings'
+            },
             {
               label: 'Theming',
               icon: 'i-lucide-palette',
@@ -199,25 +202,25 @@ watch(() => route.path, () => {
 </script>
 
 <template>
-  <div class="flex min-h-svh bg-black">
-    <u-sidebar class="hidden md:flex" v-model:open="isSidebarOpen" variant="inset" collapsible="icon" side="left" title="Navigation"
+  <div class="fixed inset-0 flex bg-black overflow-hidden">
+    <u-sidebar class="flex" v-model:open="isSidebarOpen" variant="inset" collapsible="icon" side="left" title="Navigation"
                :ui="{ header: 'min-h-none p-2' }">
 
       <template #header>
         <div class="flex flex-col items-center w-full">
           <div class="flex flex-row items-center">
             <a href="/" class="flex items-center justify-center py-2 px-1">
-              <div v-if="isSidebarOpen" class="text-3xl font-black tracking-tighter text-white font-sans flex items-baseline">
+              <div v-if="isSidebarOpen" class="font-black tracking-tighter text-white font-sans flex items-baseline transition-all" :style="{ fontSize: (settings.logoSize || 24) + 'px' }">
                 <template v-if="settings.logoType === 'image'">
-                  <img :src="settings.logoUrl" alt="Logo" class="h-6 w-auto object-contain shrink-0" >
+                  <img :src="settings.logoUrl" alt="Logo" class="w-auto object-contain shrink-0 transition-all" :style="{ height: (settings.logoSize || 24) + 'px' }">
                 </template>
                 <template v-else>
                   {{ settings.logoText || 'glide' }}<span v-if="settings.logoShowDot !== 'false'" class="text-primary-500">.</span>
                 </template>
               </div>
-              <div v-else class="text-2xl font-black tracking-tighter text-white font-sans flex items-baseline">
+              <div v-else class="font-black tracking-tighter text-white font-sans flex items-baseline transition-all" :style="{ fontSize: (Math.max(16, (settings.logoSize || 24) - 4)) + 'px' }">
                 <template v-if="settings.logoType === 'image'">
-                  <img :src="settings.logoUrlMinimal || settings.logoUrl" alt="Logo" class="h-6 w-auto object-contain shrink-0" >
+                  <img :src="settings.logoUrlMinimal || settings.logoUrl" alt="Logo" class="w-auto object-contain shrink-0 transition-all" :style="{ height: (Math.max(16, (settings.logoSize || 24) - 4)) + 'px' }">
                 </template>
                 <template v-else>
                   {{ settings.logoTextMinimal || 'g' }}<span v-if="settings.logoShowDot !== 'false'" class="text-primary-500">.</span>
@@ -243,21 +246,21 @@ watch(() => route.path, () => {
         <u-dropdown-menu :items="profileItems" :content="{ side: 'top' }" class="cursor-pointer">
           <div v-if="isSidebarOpen" class="flex flex-col w-full p-2 rounded-lg hover:bg-neutral-800">
             <u-user
-                :name="user?.username || 'User'"
+                :name="user?.username"
                 :description="user?.isAdmin ? 'Administrator' : 'Member'"
                 :avatar="{
-                            src: user?.avatarUrl || undefined,
-                            text: !user?.avatarUrl ? getAvatarText(user?.username) : undefined,
-                            style: !user?.avatarUrl ? { backgroundColor: getAvatarColor(user?.username), color: '#171717' } : {},
-                            loading: 'lazy'
-                        }"
+                    src: user?.avatarUrl || undefined,
+                    icon: !user?.avatarUrl ? 'i-lucide-user' : undefined,
+                    loading: 'lazy',
+                    class: !user?.avatarUrl ? 'bg-neutral-800 text-neutral-400' : ''
+                }"
             />
           </div>
           <div v-else class="flex flex-col items-center w-full h-auto">
             <u-avatar
                 :src="user?.avatarUrl || undefined"
-                :text="!user?.avatarUrl ? getAvatarText(user?.username) : undefined"
-                :style="!user?.avatarUrl ? { backgroundColor: getAvatarColor(user?.username), color: '#171717' } : {}"
+                :icon="!user?.avatarUrl ? 'i-lucide-user' : undefined"
+                :class="!user?.avatarUrl ? 'bg-neutral-800 text-neutral-400' : ''"
                 loading="lazy"
                 size="md"
             />
@@ -266,7 +269,7 @@ watch(() => route.path, () => {
       </template>
     </u-sidebar>
 
-    <div class="flex-1 flex flex-col overflow-clip md:rounded-xl md:ring md:ring-default bg-neutral-900 md:my-6 mb-0 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+    <div class="flex-1 flex flex-col overflow-y-auto overflow-x-hidden md:rounded-xl md:ring md:ring-default bg-neutral-900 md:my-6 relative">
 
       <div class="sticky top-0 z-40 bg-neutral-900/80 backdrop-blur-xl py-2 flex items-center px-4 border-b border-default space-x-4 pt-[max(0.5rem,env(safe-area-inset-top))]">
         <u-button
@@ -302,61 +305,5 @@ watch(() => route.path, () => {
       </div>
     </div>
 
-    <!-- Mobile Project Modal -->
-    <u-modal v-model:open="isMobileMenuOpen" class="md:hidden" title="Projects & Navigation">
-      <template #body>
-        <div class="p-2 flex-1 flex flex-col gap-2">
-          <u-navigation-menu 
-            :items="projects.map(p => ({ label: p.name, icon: 'i-lucide-folder', href: `/projects/${p.id}`, class: currentProject?.id === p.id ? '!text-primary bg-primary/10' : '' }))" 
-            orientation="vertical" 
-            :ui="{ link: 'p-2' }"
-          />
-          
-          <template v-if="isProjectContext">
-            <u-separator/>
-            <u-navigation-menu 
-              :items="secondaryItems" 
-              orientation="vertical" 
-              :ui="{ link: 'p-2' }"
-            />
-          </template>
-        </div>
-      </template>
-    </u-modal>
-
-    <!-- Mobile Settings Modal -->
-    <u-modal v-model:open="isSettingsMenuOpen" class="md:hidden" title="Settings & Profile">
-      <template #body>
-        <div class="p-2 flex-1 flex flex-col gap-2">
-          <u-navigation-menu 
-            :items="[
-              { label: 'Account', icon: 'i-lucide-user', href: '/settings/account' },
-              { label: 'Settings', icon: 'i-lucide-cog', href: '/settings' },
-              { label: 'Logout', icon: 'i-lucide-log-out', href: '/logout' }
-            ]" 
-            orientation="vertical" 
-            :ui="{ link: 'p-2' }"
-          />
-        </div>
-      </template>
-    </u-modal>
-
-    <!-- Mobile Bottom Navigation -->
-    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-xl border-t border-default z-50 pb-[env(safe-area-inset-bottom)]">
-      <div class="flex justify-around items-center h-16 px-2">
-        <nuxt-link to="/" class="flex flex-col items-center justify-center w-full h-full text-muted hover:text-primary transition-colors" exact-active-class="!text-primary">
-          <u-icon name="i-lucide-house" class="w-6 h-6 mb-1" />
-          <span class="text-[10px] font-medium">Home</span>
-        </nuxt-link>
-        <button @click="isMobileMenuOpen = true" class="flex flex-col items-center justify-center w-full h-full text-muted hover:text-primary transition-colors" :class="isProjectContext ? '!text-primary' : ''">
-          <u-icon name="i-lucide-folder" class="w-6 h-6 mb-1" />
-          <span class="text-[10px] font-medium">Project</span>
-        </button>
-        <button @click="isSettingsMenuOpen = true" class="flex flex-col items-center justify-center w-full h-full text-muted hover:text-primary transition-colors" :class="route.path.startsWith('/settings') ? '!text-primary' : ''">
-          <u-icon name="i-lucide-settings" class="w-6 h-6 mb-1" />
-          <span class="text-[10px] font-medium">Settings</span>
-        </button>
-      </div>
-    </div>
   </div>
 </template>

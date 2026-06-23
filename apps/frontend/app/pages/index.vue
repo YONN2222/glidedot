@@ -93,7 +93,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-8 max-w-7xl mx-auto py-4">
+  <div class="flex flex-col gap-8 w-full py-4">
     <!-- Header -->
     <div class="flex flex-col gap-1">
       <h1 class="text-2xl font-bold">Welcome back, {{ user?.username || 'User' }}!</h1>
@@ -156,7 +156,7 @@ onUnmounted(() => {
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         <!-- Productivity Chart (Takes up 1 column) -->
-        <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-4 h-full">
           <h2 class="text-lg font-semibold flex items-center gap-2">
             <u-icon name="i-lucide-activity" class="w-5 h-5 text-neutral-400" />
             Your Activity (Last 168 Days)
@@ -166,7 +166,7 @@ onUnmounted(() => {
             <div class="overflow-x-auto pb-2 hide-scrollbar w-full">
               <div class="flex gap-1" style="width: fit-content; min-width: 100%;">
                 <template v-if="stats.personalStats?.activityHeatmap">
-                  <div class="grid grid-rows-7 gap-1 grid-flow-col auto-cols-max mx-auto">
+                  <div class="grid gap-1 mx-auto" style="grid-template-columns: repeat(24, minmax(0, 1fr));">
                     <div 
                       v-for="day in stats.personalStats.activityHeatmap" 
                       :key="day.date"
@@ -198,15 +198,15 @@ onUnmounted(() => {
           </u-card>
         </div>
         <!-- Recently Edited Projects (Takes up 1 column) -->
-        <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-4 h-full">
           <h2 class="text-lg font-semibold flex items-center gap-2">
             <u-icon name="i-lucide-history" class="w-5 h-5 text-neutral-400" />
             Recently Edited
           </h2>
           
-          <u-card :ui="{ body: 'p-0 sm:p-0' }">
+          <u-card :ui="{ body: 'p-0 sm:p-0 h-full flex flex-col' }" class="flex-1 flex flex-col">
             <template v-if="!stats.recentProjects || stats.recentProjects.length === 0">
-              <div class="p-6 text-center text-sm text-neutral-500 flex flex-col items-center gap-2">
+              <div class="flex-1 flex flex-col items-center justify-center p-6 text-center text-sm text-neutral-500 gap-2 min-h-[160px]">
                 <u-icon name="i-lucide-ghost" class="w-8 h-8 text-neutral-600" />
                 No recent activity.
               </div>

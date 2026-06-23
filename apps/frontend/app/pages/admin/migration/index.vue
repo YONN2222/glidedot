@@ -275,21 +275,32 @@ const triggerS3Backup = async () => {
 </script>
 
 <template>
-  <div class="max-w-3xl w-full">
+  <div class="w-full">
     <div class="flex flex-col gap-10">
       <div class="flex flex-col gap-4">
         <div>
-          <h1 class="text-xl font-bold">Migration</h1>
-          <p class="text-sm text-neutral-400">Migrate from systems like Traduora or manage your glide data.</p>
+          <h1 class="text-xl font-bold">Data & Migration</h1>
+          <p class="text-sm text-neutral-400">Manage, migrate, and backup your Glide system data.</p>
         </div>
-        <u-card class="flex flex-col h-full">
+        <u-card class="flex flex-col h-full" :ui="{ body: { padding: 'p-2 sm:p-4' } }">
         <u-tabs 
-          :items="[{ label: 'Translations', slot: 'translations', icon: 'i-lucide-languages' }, { label: 'Conventions', slot: 'conventions', icon: 'i-lucide-book-dashed' }]"
+          :items="[
+            { label: 'Project Data', slot: 'project', icon: 'i-lucide-file-json' }, 
+            { label: 'Local Backup', slot: 'local', icon: 'i-lucide-hard-drive-download' },
+            { label: 'Cloud Backup', slot: 's3', icon: 'i-lucide-cloud' }
+          ]"
           class="w-full"
         >
-          <template #translations>
+          <template #project>
             <div class="flex flex-col gap-6 pt-4">
-              <div class="grid grid-cols-2 gap-4">
+              <div class="flex flex-col gap-1">
+                <h2 class="text-lg font-bold flex items-center gap-2">
+                  <u-icon name="i-lucide-file-json" class="w-5 h-5 text-primary-500" />
+                  Project Data
+                </h2>
+                <p class="text-sm text-neutral-400">Import or export JSON translations and formatting conventions for specific projects.</p>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <u-form-field label="Project">
                   <u-select
                     v-model="selectedProjectId"
@@ -299,7 +310,7 @@ const triggerS3Backup = async () => {
                   />
                 </u-form-field>
 
-                <u-form-field label="Language">
+                <u-form-field label="Language (For Translations)">
                   <u-select
                     v-model="selectedLanguageId"
                     :items="languages.map(l => ({ label: l.name, value: l.id }))"
@@ -312,179 +323,171 @@ const triggerS3Backup = async () => {
 
               <u-separator />
 
-              <div class="grid grid-cols-2 gap-4">
-                <div class="flex flex-col gap-2">
-                  <h3 class="font-medium text-sm">Export Translations</h3>
-                  <p class="text-xs text-neutral-400 mb-2">Download a flat JSON file containing all translations for the selected project and language.</p>
-                  <u-button 
-                    label="Export to JSON" 
-                    icon="i-lucide-download" 
-                    color="primary" 
-                    variant="subtle"
-                    :disabled="!selectedLanguageId"
-                    :loading="isExporting"
-                    class="justify-center"
-                    @click="exportData"
-                  />
-                </div>
+              <div class="flex flex-col gap-4">
+                <h3 class="font-medium text-base text-neutral-200 flex items-center gap-2">
+                  <u-icon name="i-lucide-languages" class="w-4 h-4 text-primary-500" />
+                  Translations
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="flex flex-col gap-2 p-4 rounded-xl border border-neutral-800 bg-neutral-900/30">
+                    <h3 class="font-medium text-sm">Export</h3>
+                    <p class="text-xs text-neutral-400 mb-2 flex-1">Download a flat JSON file containing all translations for the selected project and language.</p>
+                    <u-button 
+                      label="Export to JSON" 
+                      icon="i-lucide-download" 
+                      color="primary" 
+                      variant="subtle"
+                      :disabled="!selectedLanguageId"
+                      :loading="isExporting"
+                      class="justify-center w-full"
+                      @click="exportData"
+                    />
+                  </div>
 
-                <div class="flex flex-col gap-2">
-                  <h3 class="font-medium text-sm">Import Translations</h3>
-                  <p class="text-xs text-neutral-400 mb-2">Upload a flat JSON file (e.g. from Traduora) to import translations. Existing keys will be updated.</p>
-                  <input 
-                    ref="fileInput" 
-                    type="file" 
-                    accept=".json" 
-                    class="hidden" 
-                    @change="handleFileSelect"
-                  >
-                  <u-form-field class="mb-2">
-                    <div class="flex items-center gap-2">
+                  <div class="flex flex-col gap-2 p-4 rounded-xl border border-neutral-800 bg-neutral-900/30">
+                    <h3 class="font-medium text-sm">Import</h3>
+                    <p class="text-xs text-neutral-400 mb-2 flex-1">Upload a flat JSON file to import translations. Existing keys will be updated.</p>
+                    <input 
+                      ref="fileInput" 
+                      type="file" 
+                      accept=".json" 
+                      class="hidden" 
+                      @change="handleFileSelect"
+                    >
+                    <div class="flex items-center gap-2 mb-2">
                       <u-checkbox v-model="importAsPending" />
-                      <span class="text-xs font-medium">Import as pending review</span>
+                      <span class="text-xs font-medium text-neutral-300">Import as pending review</span>
                     </div>
-                  </u-form-field>
-                  <u-button 
-                    label="Import from JSON" 
-                    icon="i-lucide-upload" 
-                    color="primary" 
-                    :disabled="!selectedLanguageId"
-                    :loading="isImporting"
-                    class="justify-center"
-                    @click="triggerFileInput"
-                  />
+                    <u-button 
+                      label="Import from JSON" 
+                      icon="i-lucide-upload" 
+                      color="primary" 
+                      :disabled="!selectedLanguageId"
+                      :loading="isImporting"
+                      class="justify-center w-full"
+                      @click="triggerFileInput"
+                    />
+                  </div>
                 </div>
-              </div>
-            </div>
-          </template>
-
-          <template #conventions>
-            <div class="flex flex-col gap-6 pt-4">
-              <div class="grid grid-cols-2 gap-4">
-                <u-form-field label="Project">
-                  <u-select
-                    v-model="selectedProjectId"
-                    :items="projects.map(p => ({ label: p.name, value: p.id }))"
-                    placeholder="Select project"
-                    class="w-full"
-                  />
-                </u-form-field>
-
-                <u-form-field label="Language">
-                  <u-select
-                    disabled
-                    placeholder="Not required for conventions"
-                    class="w-full opacity-50"
-                  />
-                </u-form-field>
               </div>
 
               <u-separator />
 
-              <div class="grid grid-cols-2 gap-4">
-                <div class="flex flex-col gap-2">
-                  <h3 class="font-medium text-sm">Export Conventions</h3>
-                  <p class="text-xs text-neutral-400 mb-2">Download a JSON file containing key templates, variables, and glossary terms.</p>
+              <div class="flex flex-col gap-4">
+                <h3 class="font-medium text-base text-neutral-200 flex items-center gap-2">
+                  <u-icon name="i-lucide-book-dashed" class="w-4 h-4 text-primary-500" />
+                  Conventions
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="flex flex-col gap-2 p-4 rounded-xl border border-neutral-800 bg-neutral-900/30">
+                    <h3 class="font-medium text-sm">Export</h3>
+                    <p class="text-xs text-neutral-400 mb-2 flex-1">Download a JSON file containing key templates, variables, and glossary terms.</p>
+                    <u-button 
+                      label="Export Conventions" 
+                      icon="i-lucide-download" 
+                      color="primary" 
+                      variant="subtle"
+                      :disabled="!selectedProjectId"
+                      :loading="isExportingConventions"
+                      class="justify-center w-full"
+                      @click="exportConventions"
+                    />
+                  </div>
+
+                  <div class="flex flex-col gap-2 p-4 rounded-xl border border-neutral-800 bg-neutral-900/30">
+                    <h3 class="font-medium text-sm">Import</h3>
+                    <p class="text-xs text-neutral-400 mb-2 flex-1">Upload a JSON file to import key templates, variables, and glossary terms.</p>
+                    <input 
+                      ref="conventionsFileInput" 
+                      type="file" 
+                      accept=".json" 
+                      class="hidden" 
+                      @change="handleConventionsFileSelect"
+                    >
+                    <u-button 
+                      label="Import Conventions" 
+                      icon="i-lucide-upload" 
+                      color="primary" 
+                      :disabled="!selectedProjectId"
+                      :loading="isImportingConventions"
+                      class="justify-center w-full mt-auto"
+                      @click="triggerConventionsFileInput"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <template #local>
+            <div class="flex flex-col gap-6 pt-4">
+              <div class="flex flex-col gap-1">
+                <h2 class="text-lg font-bold flex items-center gap-2">
+                  <u-icon name="i-lucide-hard-drive-download" class="w-5 h-5 text-primary-500" />
+                  Local System Backup
+                </h2>
+                <p class="text-sm text-neutral-400">Export or import a complete snapshot of your Glide instance (projects, settings, conventions, and all translations, including those in review).</p>
+              </div>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="flex flex-col gap-2 p-4 rounded-xl border border-neutral-800 bg-neutral-900/30">
+                  <h3 class="font-medium text-sm">Download Backup</h3>
+                  <p class="text-xs text-neutral-400 mb-2 flex-1">Download a ZIP file containing the entire localization database and all related data.</p>
                   <u-button 
-                    label="Export Conventions" 
+                    label="Download Backup ZIP" 
                     icon="i-lucide-download" 
                     color="primary" 
                     variant="subtle"
-                    :disabled="!selectedProjectId"
-                    :loading="isExportingConventions"
-                    class="justify-center"
-                    @click="exportConventions"
+                    :loading="isBackingUp"
+                    class="justify-center w-full"
+                    @click="downloadBackup"
                   />
                 </div>
 
-                <div class="flex flex-col gap-2">
-                  <h3 class="font-medium text-sm">Import Conventions</h3>
-                  <p class="text-xs text-neutral-400 mb-2">Upload a JSON file to import key templates, variables, and glossary terms.</p>
+                <div class="flex flex-col gap-2 p-4 rounded-xl border border-neutral-800 bg-neutral-900/30">
+                  <h3 class="font-medium text-sm">Restore Backup</h3>
+                  <p class="text-xs text-neutral-400 mb-2 flex-1">Upload a previously generated ZIP backup. Warning: This will overwrite your existing data.</p>
                   <input 
-                    ref="conventionsFileInput" 
+                    ref="backupFileInput" 
                     type="file" 
-                    accept=".json" 
+                    accept=".zip" 
                     class="hidden" 
-                    @change="handleConventionsFileSelect"
+                    @change="handleBackupSelect"
                   >
                   <u-button 
-                    label="Import Conventions" 
+                    label="Restore Backup" 
                     icon="i-lucide-upload" 
                     color="primary" 
-                    :disabled="!selectedProjectId"
-                    :loading="isImportingConventions"
-                    class="justify-center"
-                    @click="triggerConventionsFileInput"
+                    :loading="isRestoring"
+                    class="justify-center w-full"
+                    @click="triggerBackupInput"
                   />
                 </div>
               </div>
             </div>
           </template>
-        </u-tabs>
-        </u-card>
-      </div>
 
-      <div class="flex flex-col gap-4">
-        <div>
-          <h1 class="text-xl font-bold">System Backup & Restore</h1>
-          <p class="text-sm text-neutral-400">Export or import a complete backup of your localization data (projects, languages, keys, and translations).</p>
-        </div>
-        <u-card class="flex flex-col h-full" :ui="{ body: { base: 'flex-1 flex flex-col' } }">
-          <div class="flex flex-col gap-6">
-          <div class="grid grid-cols-2 gap-4">
-            <div class="flex flex-col gap-2">
-              <h3 class="font-medium text-sm">Download Backup</h3>
-              <p class="text-xs text-neutral-400 mb-2">Download a ZIP file containing all projects, languages, labels, and translations.</p>
-              <u-button 
-                label="Download Backup ZIP" 
-                icon="i-lucide-download" 
-                color="primary" 
-                variant="subtle"
-                :loading="isBackingUp"
-                class="justify-center"
-                @click="downloadBackup"
-              />
-            </div>
-
-            <div class="flex flex-col gap-2">
-              <h3 class="font-medium text-sm">Restore Backup</h3>
-              <p class="text-xs text-neutral-400 mb-2">Upload a previously generated ZIP backup. Warning: This will overwrite your existing data.</p>
-              <input 
-                ref="backupFileInput" 
-                type="file" 
-                accept=".zip" 
-                class="hidden" 
-                @change="handleBackupSelect"
-              >
-              <u-button 
-                label="Restore Backup" 
-                icon="i-lucide-upload" 
-                color="primary" 
-                :loading="isRestoring"
-                class="justify-center"
-                @click="triggerBackupInput"
-              />
-            </div>
-          </div>
-
-          <u-separator />
-
-          <div class="flex flex-col gap-4">
-            <div class="flex flex-col gap-1">
-              <h3 class="font-medium text-sm">S3 Backups</h3>
-              <p class="text-xs text-neutral-400">Configure remote backups to an S3-compatible storage (AWS, MinIO, etc.).</p>
-            </div>
-            
-            <div class="relative">
-              <div v-if="!settings.s3Configured" class="absolute inset-0 z-20 backdrop-blur-[2px] bg-neutral-950/40 rounded-xl flex items-center justify-center">
-                <div class="bg-black/60 p-4 rounded-lg border border-neutral-800 text-center flex flex-col gap-2 max-w-sm">
-                  <u-icon name="i-lucide-cloud-off" class="w-8 h-8 text-neutral-400 mx-auto" />
-                  <span class="font-bold">S3 Not Configured</span>
-                  <span class="text-xs text-neutral-400">Please provide S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY, and S3_SECRET_KEY in your environment variables.</span>
-                </div>
+          <template #s3>
+            <div class="flex flex-col gap-6 pt-4">
+              <div class="flex flex-col gap-1">
+                <h2 class="text-lg font-bold flex items-center gap-2">
+                  <u-icon name="i-lucide-cloud" class="w-5 h-5 text-primary-500" />
+                  Cloud Backup
+                </h2>
+                <p class="text-sm text-neutral-400">Configure automated remote backups of your entire localization database to an S3-compatible storage (AWS, MinIO, etc.).</p>
               </div>
+            
+            <div class="flex flex-col gap-4">
+              <u-alert 
+                v-if="!settings.s3Configured" 
+                color="warning" 
+                variant="subtle" 
+                title="S3 Not Configured" 
+                description="Please provide S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY, and S3_SECRET_KEY in your environment variables." 
+                icon="i-lucide-cloud-off" 
+              />
               
-              <div class="grid grid-cols-2 gap-4 p-4 border border-neutral-800 rounded-xl bg-black/20" :class="{ 'opacity-50 pointer-events-none': !settings.s3Configured }">
+              <div class="grid grid-cols-2 gap-4 p-4 border border-neutral-800 rounded-xl" :class="{ 'opacity-50 pointer-events-none': !settings.s3Configured }">
                 <u-form-field label="Schedule Automatic Backups">
                   <div class="flex items-center gap-2 mt-2">
                     <u-switch v-model="s3BackupEnabled" />
@@ -517,9 +520,9 @@ const triggerS3Backup = async () => {
                 </div>
               </div>
             </div>
-          </div>
-
-          </div>
+            </div>
+          </template>
+        </u-tabs>
         </u-card>
       </div>
     </div>
