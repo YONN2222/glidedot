@@ -25,8 +25,13 @@ const { data: projectsData } = useNuxtData('projects')
 const { currentProject } = useProject(projectsData as any)
 const inContextUrl = computed(() => currentProject.value?.inContextUrl)
 const iframeSrc = computed(() => {
-  const urlString = currentProject.value?.inContextUrl
+  let urlString = currentProject.value?.inContextUrl
   if (!urlString) return ''
+  
+  if (!/^https?:\/\//i.test(urlString) && !urlString.startsWith('/')) {
+    urlString = urlString.startsWith('localhost') ? `http://${urlString}` : `https://${urlString}`
+  }
+
   try {
     const url = new URL(urlString)
     url.searchParams.set('_t', Date.now().toString())
