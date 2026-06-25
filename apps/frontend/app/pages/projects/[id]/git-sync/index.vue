@@ -30,12 +30,35 @@ const fetchData = async () => {
   }
 }
 
+import { formatDistanceToNow } from 'date-fns'
+
 const isPushing = ref<Record<number, boolean>>({})
+const confirmModalOpen = ref(false)
+const pendingSyncId = ref<number | null>(null)
+const lastSyncTimeStr = ref('')
+const lastSyncedByName = ref<string | null>(null)
+
+const attemptPush = (sync: any) => {
+  if (sync.lastSyncedAt) {
+    const diffMins = (new Date().getTime() - new Date(sync.lastSyncedAt).getTime()) / 1000 / 60;
+    if (diffMins < 60) {
+      lastSyncTimeStr.value = formatDistanceToNow(new Date(sync.lastSyncedAt), { addSuffix: true });
+      lastSyncedByName.value = sync.lastSyncedByName;
+      pendingSyncId.value = sync.id;
+      confirmModalOpen.value = true;
+      return;
+    }
+  }
+  pushSync(sync.id);
+}
+
 const pushSync = async (id: number) => {
+  confirmModalOpen.value = false;
   isPushing.value[id] = true
   try {
     const res = await fetchApi(`/git/projects/${projectId}/syncs/${id}/execute`, { method: 'POST' })
     toast.add({ title: 'PR Created!', description: `Successfully opened a pull request on branch: ${res.branch}`, color: 'success' })
+    await fetchData() // refresh to get new lastSyncedAt
   } catch (e: any) {
     toast.add({ title: 'Push Failed', description: e.message || 'An error occurred', color: 'error' })
   } finally {
@@ -49,11 +72,14 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-6">
-    <div class="mb-6 flex justify-between items-start">
+  <div class="flex flex-col gap-4 md:gap-6 -m-4 sm:-m-6 lg:-m-8 p-4 sm:p-6 lg:p-8 overflow-x-hidden md:overflow-x-visible">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-neutral-900 border border-neutral-800 p-4 rounded-xl gap-4 shrink-0 mb-2">
       <div>
-        <h1 class="text-2xl font-bold text-white mb-2">Git Sync</h1>
-        <p class="text-neutral-400">Push your translations directly to your version control provider via automated Pull Requests.</p>
+        <h1 class="text-white font-medium flex items-center gap-2 text-lg">
+            <u-icon name="i-lucide-git-pull-request" class="w-5 h-5 text-primary-500" />
+            Git Sync
+        </h1>
+        <p class="text-sm text-neutral-400 mt-1">Push your translations directly to your version control provider via automated Pull Requests.</p>
       </div>
     </div>
 
@@ -75,13 +101,29 @@ onMounted(() => {
             <div class="flex gap-4 mt-2 text-sm text-neutral-400">
               <span class="flex items-center gap-1"><u-icon name="i-lucide-git-branch" class="w-4 h-4" /> {{ sync.branch }}</span>
               <span class="flex items-center gap-1"><u-icon name="i-lucide-file-code" class="w-4 h-4" /> {{ sync.filePath }}</span>
+              <span v-if="sync.lastSyncedAt" class="flex items-center gap-1 text-warning-400 ml-4"><u-icon name="i-lucide-clock" class="w-4 h-4" /> Last PR: {{ formatDistanceToNow(new Date(sync.lastSyncedAt), { addSuffix: true }) }}</span>
             </div>
           </div>
         </div>
         <div class="flex gap-2 w-full md:w-auto mt-4 md:mt-0">
-          <u-button label="Create Pull Request" icon="i-lucide-upload-cloud" color="primary" class="flex-1 md:flex-none justify-center" :loading="isPushing[sync.id]" @click="pushSync(sync.id)" />
+          <u-button label="Create Pull Request" icon="i-lucide-upload-cloud" color="neutral" class="flex-1 md:flex-none justify-center" :loading="isPushing[sync.id]" @click="attemptPush(sync)" />
         </div>
       </div>
     </div>
+
+    <!-- Confirm Modal -->
+    <u-modal v-model:open="confirmModalOpen" title="Create Pull Request">
+      <template #body>
+        <p class="p-4 text-sm text-neutral-400">
+          A Pull Request was already created <strong class="text-neutral-200">{{ lastSyncTimeStr }}</strong><span v-if="lastSyncedByName"> by <strong class="text-neutral-200">{{ lastSyncedByName }}</strong></span>. Are you sure you want to open another one right now? Please coordinate with your team to avoid spamming the repository.
+        </p>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <u-button label="Cancel" color="neutral" variant="ghost" @click="confirmModalOpen = false" />
+          <u-button label="Yes, create PR anyway" color="error" @click="pushSync(pendingSyncId!)" />
+        </div>
+      </template>
+    </u-modal>
   </div>
 </template>

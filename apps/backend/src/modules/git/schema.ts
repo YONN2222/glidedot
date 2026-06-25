@@ -19,6 +19,8 @@ export const projectGitSyncs = sqliteTable('project_git_syncs', {
     repoName: text('repo_name').notNull(),
     branch: text('branch').notNull(),
     filePath: text('file_path').notNull(), // e.g., 'locales/{{lang}}.json'
+    lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
+    lastSyncedBy: integer('last_synced_by').references(() => users.id, { onDelete: 'set null' }),
 }, (table) => ({
     projectProviderIdx: uniqueIndex('project_provider_idx').on(table.projectId, table.provider),
 }));

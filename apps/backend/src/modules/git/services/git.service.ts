@@ -1,6 +1,8 @@
 import { eq, and } from "drizzle-orm";
 import { userGitConnections, projectGitSyncs } from "../schema";
+import { users } from "../../users/schema";
 import { projects, languages, projectLanguages, translationKeys, translations } from "../../localization/schema";
+import { encryptString, decryptString } from "../../../utils/encryption";
 
 export class GitService {
     private db: any;
@@ -56,12 +58,12 @@ export class GitService {
         
         if (existing.length > 0) {
             return this.db.update(userGitConnections)
-                .set({ token, baseUrl })
+                .set({ token: encryptString(token), baseUrl })
                 .where(eq(userGitConnections.id, existing[0].id))
                 .returning();
         } else {
             return this.db.insert(userGitConnections)
-                .values({ userId, provider, token, baseUrl })
+                .values({ userId, provider, token: encryptString(token), baseUrl })
                 .returning();
         }
     }
@@ -72,7 +74,18 @@ export class GitService {
     }
 
     async getProjectSyncs(projectId: number) {
-        return this.db.select().from(projectGitSyncs).where(eq(projectGitSyncs.projectId, projectId));
+        const syncs = await this.db.select({
+            sync: projectGitSyncs,
+            user: users
+        })
+        .from(projectGitSyncs)
+        .leftJoin(users, eq(projectGitSyncs.lastSyncedBy, users.id))
+        .where(eq(projectGitSyncs.projectId, projectId));
+
+        return syncs.map((row: any) => ({
+            ...row.sync,
+            lastSyncedByName: row.user?.username || null
+        }));
     }
 
     async saveProjectSync(projectId: number, data: { provider: 'github' | 'gitlab' | 'forgejo', repoName: string, branch: string, filePath: string }) {
@@ -182,8 +195,14 @@ export class GitService {
             });
         }
 
-        const timestamp = new Date().getTime();
-        const branchName = `glide-translations-${timestamp}`;
+        const now = new Date();
+        const formattedDate = now.getFullYear().toString() +
+            String(now.getMonth() + 1).padStart(2, '0') +
+            String(now.getDate()).padStart(2, '0') +
+            String(now.getHours()).padStart(2, '0') +
+            String(now.getMinutes()).padStart(2, '0') +
+            String(now.getSeconds()).padStart(2, '0');
+        const branchName = `glide-sync/${formattedDate}`;
         const commitMessage = `Sync translations from glide.`;
 
         if (sync.provider === 'github') {
@@ -194,6 +213,8 @@ export class GitService {
             await this.pushToForgejo(conn.token, conn.baseUrl, sync.repoName, sync.branch, branchName, commitMessage, files);
         }
 
+        await this.db.update(projectGitSyncs).set({ lastSyncedAt: new Date(), lastSyncedBy: userId }).where(eq(projectGitSyncs.id, syncId));
+
         return { success: true, branch: branchName };
     }
 
@@ -201,7 +222,15 @@ export class GitService {
         const res = await this.db.select().from(userGitConnections)
             .where(and(eq(userGitConnections.userId, userId), eq(userGitConnections.provider, provider)))
             .limit(1);
-        return res.length > 0 ? res[0] : null;
+        if (res.length > 0) {
+            try {
+                res[0].token = decryptString(res[0].token);
+            } catch (e) {
+                console.error("Failed to decrypt git token for user", userId);
+            }
+            return res[0];
+        }
+        return null;
     }
 
     private async generateTranslationsJson(projectId: number) {

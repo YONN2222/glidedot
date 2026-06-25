@@ -50,37 +50,15 @@ const processData = async () => {
   }
 }
 
-const primaryColor = ref('#0ea5e9')
-const primaryColorRgba40 = ref('rgba(14, 165, 233, 0.4)')
-const primaryColorRgba05 = ref('rgba(14, 165, 233, 0.05)')
-
-const updatePrimaryColor = () => {
-  if (!colorProbe.value) return
-  
-  const computedColor = window.getComputedStyle(colorProbe.value).color
-  const rgbMatch = computedColor.match(/\d+/g)
-  if (rgbMatch && rgbMatch.length >= 3) {
-    const [r, g, b] = rgbMatch
-    // Check if the color is actually green (fallback) while we expect another, though green could be valid
-    primaryColor.value = `rgb(${r}, ${g}, ${b})`
-    primaryColorRgba40.value = `rgba(${r}, ${g}, ${b}, 0.4)`
-    primaryColorRgba05.value = `rgba(${r}, ${g}, ${b}, 0.05)`
-  }
-}
+// Industry standard AI color (Violet-500)
+const aiColor = '#8b5cf6'
+const aiColorRgba40 = 'rgba(139, 92, 246, 0.4)'
+const aiColorRgba05 = 'rgba(139, 92, 246, 0.05)'
 
 watch(localTimeframe, processData)
 
-let colorInterval: ReturnType<typeof setInterval>
-
 onMounted(() => {
-  updatePrimaryColor()
-  // Keep checking periodically to handle dynamic theme changes
-  colorInterval = setInterval(updatePrimaryColor, 500)
   processData()
-})
-
-onUnmounted(() => {
-  if (colorInterval) clearInterval(colorInterval)
 })
 
 const chartOptions = computed(() => {
@@ -158,14 +136,14 @@ const chartOptions = computed(() => {
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: primaryColorRgba40.value },
-              { offset: 1, color: primaryColorRgba05.value }
+              { offset: 0, color: aiColorRgba40 },
+              { offset: 1, color: aiColorRgba05 }
             ]
           }
         },
         emphasis: { focus: 'series' },
-        itemStyle: { color: primaryColor.value },
-        lineStyle: { width: 2, color: primaryColor.value },
+        itemStyle: { color: aiColor },
+        lineStyle: { width: 2, color: aiColor },
         data: auto
       }
     ]
@@ -283,9 +261,6 @@ const advancedStats = computed(() => {
         <span class="text-sm font-medium">No translation data found for this timeframe</span>
       </div>
     </div>
-    
-    <!-- Hidden element to extract the primary color for ECharts canvas gradient -->
-    <div ref="colorProbe" class="text-primary-500 absolute opacity-0 pointer-events-none"></div>
   </div>
 </template>
 
