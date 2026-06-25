@@ -161,6 +161,11 @@ const secondaryItems = computed<NavigationMenuItem[]>(() => [
     class: 'hidden md:flex'
   },
   {
+    label: 'Git Sync',
+    icon: 'i-lucide-git-merge',
+    href: `/projects/${currentProject.value?.id}/git-sync`
+  },
+  {
     label: 'Reviews',
     icon: 'i-lucide-check-circle',
     href: `/projects/${currentProject.value?.id}/reviews`

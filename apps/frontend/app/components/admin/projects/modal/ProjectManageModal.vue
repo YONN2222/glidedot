@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import type { Project } from '~/types'
 import UnsavedChangesAlert from '~/components/UnsavedChangesAlert.vue'
+import ProjectGitSyncConfig from './ProjectGitSyncConfig.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -68,6 +69,10 @@ const discard = () => {
             <span class="text-xs text-neutral-400">Disable freeform keys. New keys must use a predefined schema template.</span>
           </div>
           <u-switch v-model="project.requireTemplate" />
+        </div>
+
+        <div v-if="mode === 'edit' && project.id" class="mt-4 pt-4 border-t border-neutral-800">
+          <ProjectGitSyncConfig :project-id="project.id" />
         </div>
       </div>
     </template>

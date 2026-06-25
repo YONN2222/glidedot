@@ -372,7 +372,7 @@ onUnmounted(() => {
               
               <u-button 
                 size="xs" 
-                color="primary" 
+                color="neutral" 
                 :disabled="tempText === currentTranslationText"
                 class="px-4"
                 @click="flushSave"

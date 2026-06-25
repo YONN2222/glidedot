@@ -335,7 +335,6 @@ onUnmounted(() => {
         </div>
       </div>
     </u-card>
-
     <unsaved-changes-alert 
       :has-unsaved-changes="hasUnsavedChanges" 
       :loading="isAlertsLoading" 

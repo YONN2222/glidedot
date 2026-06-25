@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import UnsavedChangesAlert from '~/components/UnsavedChangesAlert.vue'
+import GitConnections from '~/components/settings/GitConnections.vue'
 
 definePageMeta({
   layout: 'default'
@@ -251,7 +252,7 @@ const resetApiKey = () => {
         </div>
       </u-card>
 
-
+      <git-connections />
     </div>
 
     <user-reset-api-key-modal
