@@ -138,7 +138,7 @@
                 type: 'GLIDE_EDIT_REQUEST',
                 key: key
             }, '*');
-        });
+        }, { capture: true });
     }
 
     // Tell parent we are ready
