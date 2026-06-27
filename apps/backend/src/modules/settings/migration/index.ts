@@ -6,7 +6,7 @@ import {
     projects, languages, projectLanguages, labels, 
     translationKeys, translations, keysToLabels, activityLogs,
     keyTemplates, keyGlossary, keyVariables
-} from '../localization/schema';
+} from '../../localization/schema';
 
 // Helper function to insert in chunks to avoid SQLite 'too many SQL variables' error
 async function insertInChunks(tx: any, table: any, data: any[], chunkSize: number = 500) {

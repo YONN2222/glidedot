@@ -5,7 +5,7 @@ export default async function adminRoutes(fastify: FastifyInstance) {
 
     fastify.get('/activity-logs/leaderboard', { preHandler: [requireAdmin] }, async (request) => {
         const { activityLogs } = await import('../../localization/schema');
-        const { users } = await import('../../users/schema');
+        const { users } = await import('../users/schema');
         const { desc, eq, sql, inArray, and, gte } = await import('drizzle-orm');
 
         const query = request.query as { timeframe?: string };
@@ -289,7 +289,7 @@ export default async function adminRoutes(fastify: FastifyInstance) {
     fastify.get('/activity-logs', { preHandler: [requireAdmin] }, async (request) => {
         const { activityLogs } = await import('../../localization/schema');
         const { projects } = await import('../../localization/schema');
-        const { users } = await import('../../users/schema');
+        const { users } = await import('../users/schema');
         const { desc, eq, sql, or, like } = await import('drizzle-orm');
 
         const query = request.query as { page?: string, limit?: string, search?: string };
