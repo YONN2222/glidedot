@@ -162,7 +162,7 @@ const formatTimeSaved = (ms: number) => {
   return `${days}d ${hours % 24}h`
 }
 
-const summary = computed(() => rawData.value?.summary || { totalManual: 0, totalAuto: 0, totalTimeSavedMs: 0, medianSpeedMs: 0 })
+const summary = computed(() => rawData.value?.summary || { totalManual: 0, totalAuto: 0, totalTimeSavedMs: 0, averageSpeedMs: 0 })
 
 const advancedStats = computed(() => {
   const sum = summary.value
@@ -173,7 +173,7 @@ const advancedStats = computed(() => {
   // If no manual was done but AI was used, efficiency is "MAX"
   let efficiencyBoost = '1.0'
   if (sum.totalManual > 0) {
-    const boost = ((sum.totalAuto * sum.medianSpeedMs) + (sum.totalManual * sum.medianSpeedMs)) / (sum.totalManual * sum.medianSpeedMs)
+    const boost = ((sum.totalAuto * sum.averageSpeedMs) + (sum.totalManual * sum.averageSpeedMs)) / (sum.totalManual * sum.averageSpeedMs)
     efficiencyBoost = boost.toFixed(1)
   } else if (sum.totalAuto > 0) {
     efficiencyBoost = 'MAX'

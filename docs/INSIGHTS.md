@@ -29,8 +29,8 @@ glide. tracks the actual time a user spends manually translating a key:
 
 ### How are Metrics Calculated?
 To provide a realistic metric of how much time AI saves the team, glide. calculates:
-1. **Median Manual Speed:** The backend collects all `timeSpentMs` values from every *manual* translation. It calculates the **median** time it takes to manually translate a single string. (Median is used instead of Average to filter out extreme outliers).
-2. **Time Saved:** `Time Saved = AI Action Count * Median Manual Speed`. This ensures that the metric is uniquely tailored to the actual typing speed and complexity of your specific project and team.
+1. **Average Manual Speed (Arithmetic Mean):** The backend collects all `timeSpentMs` values from every *manual* translation. It calculates the **arithmetic mean** (the sum of all manual translation times divided by the total count) to determine the average time it takes to manually translate a single string.
+2. **Time Saved:** `Time Saved = AI Action Count * Average Manual Speed`. This ensures that the metric is uniquely tailored to the actual typing speed and complexity of your specific project and team.
 3. **Automation Rate:** `(AI Action Count / Total Translation Count) * 100`.
 4. **Efficiency Boost:** `Total Translation Count / Manual Translation Count`. If the team manually translated 100 keys and AI translated 50 keys, the boost is `150 / 100 = 1.5x`.
 
@@ -48,7 +48,7 @@ The Leaderboard ranks users based on their overall activity within the system ov
 - **Rank:** Visual indicator of the most active contributors.
 - **User:** The avatar and username of the contributor.
 - **Translations:** The number of translations the user has updated or submitted.
-- **Average Speed:** The user's personal median manual translation speed (e.g., "4.2s per key").
+- **Average Speed:** The user's personal average (arithmetic mean) manual translation speed (e.g., "4.2s per key").
 - **Activity Breakdown:** A detailed count of specific actions taken:
   - Keys Created
   - Labels Created

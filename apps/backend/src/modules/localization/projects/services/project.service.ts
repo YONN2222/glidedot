@@ -333,10 +333,8 @@ export class ProjectService {
         
         let averageTranslationSpeedMs = 0;
         if (timeSpentArr.length > 0) {
-            // Use median to avoid outliers
-            timeSpentArr.sort((a, b) => a - b);
-            const mid = Math.floor(timeSpentArr.length / 2);
-            averageTranslationSpeedMs = timeSpentArr.length % 2 !== 0 ? timeSpentArr[mid] : (timeSpentArr[mid - 1] + timeSpentArr[mid]) / 2;
+            const sum = timeSpentArr.reduce((acc, val) => acc + val, 0);
+            averageTranslationSpeedMs = sum / timeSpentArr.length;
         }
 
         const personalStats = {
