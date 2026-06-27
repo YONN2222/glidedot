@@ -215,7 +215,7 @@ export class GitService {
 
         await this.db.update(projectGitSyncs).set({ lastSyncedAt: new Date(), lastSyncedBy: userId }).where(eq(projectGitSyncs.id, syncId));
 
-        return { success: true, branch: branchName };
+        return { branch: branchName };
     }
 
     private async getConnection(userId: number, provider: 'github' | 'gitlab' | 'forgejo') {

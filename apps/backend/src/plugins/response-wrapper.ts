@@ -32,12 +32,21 @@ export default fp(async (fastify) => {
             const p = payload as Record<string, any>;
             // If it's a simple logical wrapper returned by older handler e.g. { success: true, message: '...' }
             if ('success' in p && typeof p.success === 'boolean') {
+                let finalData = p.data;
+                if (finalData === undefined) {
+                    const { success, message, ...rest } = p;
+                    if (Object.keys(rest).length > 0) {
+                        finalData = rest;
+                    } else {
+                        finalData = null;
+                    }
+                }
                 return {
                     success: p.success,
                     statusCode,
                     shortCode: p.success ? 'SUCCESS' : 'ERROR',
                     message: p.message || message,
-                    data: p.data !== undefined ? p.data : null
+                    data: finalData
                 };
             }
         }
