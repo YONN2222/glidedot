@@ -115,11 +115,8 @@ export default async function adminRoutes(fastify: FastifyInstance) {
             }
             
             if (stats.timeSpentArr.length > 0) {
-                stats.timeSpentArr.sort((a, b) => a - b);
-                const mid = Math.floor(stats.timeSpentArr.length / 2);
-                stats.averageTranslationSpeedMs = stats.timeSpentArr.length % 2 !== 0 
-                    ? stats.timeSpentArr[mid] 
-                    : (stats.timeSpentArr[mid - 1] + stats.timeSpentArr[mid]) / 2;
+                const sum = stats.timeSpentArr.reduce((acc, val) => acc + val, 0);
+                stats.averageTranslationSpeedMs = sum / stats.timeSpentArr.length;
             }
             // @ts-ignore
             delete stats.timeSpentArr;
@@ -212,11 +209,10 @@ export default async function adminRoutes(fastify: FastifyInstance) {
             } catch (e) {}
         }
 
-        let medianSpeedMs = 0;
+        let averageSpeedMs = 0;
         if (timeSpentArr.length > 0) {
-            timeSpentArr.sort((a, b) => a - b);
-            const mid = Math.floor(timeSpentArr.length / 2);
-            medianSpeedMs = timeSpentArr.length % 2 !== 0 ? timeSpentArr[mid] : (timeSpentArr[mid - 1] + timeSpentArr[mid]) / 2;
+            const sum = timeSpentArr.reduce((acc, val) => acc + val, 0);
+            averageSpeedMs = sum / timeSpentArr.length;
         }
 
         let totalTimeSavedMs = 0;
@@ -225,7 +221,7 @@ export default async function adminRoutes(fastify: FastifyInstance) {
 
         const timeline: { date: string, manualCount: number, autoCount: number, timeSavedMs: number }[] = [];
         
-        // Populate the timeline and calculate time saved based on median speed
+        // Populate the timeline and calculate time saved based on average speed
         // To show 0s for missing days, we'll iterate through the date range
         let currentDate = new Date(fromDate);
         currentDate.setUTCHours(0, 0, 0, 0);
@@ -254,7 +250,7 @@ export default async function adminRoutes(fastify: FastifyInstance) {
             }
             const stats = dailyStats.get(dateKey) || { manualCount: 0, autoCount: 0, timeSavedMs: 0 };
             
-            const timeSaved = stats.autoCount * medianSpeedMs;
+            const timeSaved = stats.autoCount * averageSpeedMs;
             
             totalTimeSavedMs += timeSaved;
             totalAuto += stats.autoCount;
@@ -280,7 +276,7 @@ export default async function adminRoutes(fastify: FastifyInstance) {
                     totalManual,
                     totalAuto,
                     totalTimeSavedMs,
-                    medianSpeedMs
+                    averageSpeedMs
                 }
             }
         };
