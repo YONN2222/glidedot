@@ -284,9 +284,9 @@ onUnmounted(() => {
             <u-select v-model="alertConfig.provider" :items="providerOptions" class="w-full" />
           </u-form-field>
           <u-form-field label="Webhook URL / Target" class="flex-1 w-full" v-if="alertConfig.provider !== 'none'">
-            <div class="flex flex-col min-[450px]:flex-row items-stretch min-[450px]:items-center gap-2">
-              <u-input v-model="alertConfig.url" placeholder="https://..." class="flex-grow min-w-0" />
-              <u-dropdown-menu :items="testDropdownItems" :disabled="!alertConfig.url" class="shrink-0">
+            <div class="flex flex-col min-[450px]:flex-row items-stretch min-[450px]:items-center gap-2 w-full">
+              <u-input v-model="alertConfig.url" placeholder="https://..." class="w-full min-w-0" />
+              <u-dropdown-menu :items="testDropdownItems" :disabled="!alertConfig.url" class="shrink-0 w-full min-[450px]:w-auto">
                 <u-button 
                   label="Test Notification" 
                   color="primary" 
