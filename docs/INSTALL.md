@@ -34,7 +34,7 @@ bun run dev
 
 Deploying glide. is incredibly easy thanks to the included `docker-compose.yml`. We do not use `.env` files—all configuration is done directly via Docker Compose.
 
-1. Open `docker-compose.yml` and insert your OIDC, DeepL, and S3 credentials into the `environment` blocks.
+1. Open `docker-compose.yml` and insert your OIDC and S3 credentials into the `environment` blocks.
 2. Build and start the containers in detached mode:
 
 ```bash

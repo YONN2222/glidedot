@@ -68,14 +68,14 @@ These variables configure the Nuxt web application, OAuth2/OIDC SSO logins, and 
 | `NUXT_OIDC_PROVIDERS_OIDC_TOKEN_URL` | *(None)* | Token exchange endpoint of your OIDC Provider. | ❌ (Required for OIDC) |
 | `NUXT_OIDC_PROVIDERS_OIDC_REDIRECT_URI` | *(None)* | The exact callback URL registered in your OIDC provider (e.g., `https://glide.domain.com/auth/oidc/callback`). | ❌ (Required for OIDC) |
 | `NUXT_OIDC_PROVIDERS_OIDC_USER_INFO_URL` | *(None)* | User Profile info endpoint of your OIDC Provider. | ❌ (Required for OIDC) |
-| `NUXT_OIDC_SESSION_SECRET` | *(Fallback set)* | Cryptographic signing secret for session cookies. **Can be any length**—if under 48 characters, glide.'s runtime Nitro plugin automatically hashes it with SHA-512 during server startup to guarantee a secure 128-char hex string and prevent 500 errors. | **YES** (In Prod) |
-| `NUXT_OIDC_AUTH_SESSION_SECRET` | *(Fallback set)* | Cryptographic secret for browser auth flow sessions. **Can be any length**—if under 48 characters, it is automatically hashed with SHA-512 at runtime startup to ensure a secure, valid length. | **YES** (In Prod) |
+| `NUXT_OIDC_SESSION_SECRET` | *(Auto-generated)* | Cryptographic signing secret for session cookies. **Fully auto-generated with a secure random 64-char hex string on startup if not provided!** If you do provide a custom string but it is under 48 characters, glide.'s runtime Nitro plugin automatically hashes it with SHA-512 to guarantee a valid length and prevent 500 errors. | ❌ (Auto-generated) |
+| `NUXT_OIDC_AUTH_SESSION_SECRET` | *(Auto-generated)* | Cryptographic secret for browser auth flow sessions. **Fully auto-generated with a secure random 64-char hex string on startup if not provided!** If you do provide a custom string but it is under 48 characters, it is automatically hashed with SHA-512 to ensure a secure, valid length. | ❌ (Auto-generated) |
 | `NUXT_OIDC_TOKEN_KEY` | *(Auto-generated)*| Base64-encoded token encryption key. | ❌ (Auto-generated if blank) |
 
 > [!TIP]
-> **Runtime Auto-Hashing Protection:** `nuxt-oidc-auth` strictly requires session and auth secrets to be at least **48 characters long** to prevent session hijack. To make deployment completely error-free, glide. includes a **runtime Nitro server plugin** (`apps/frontend/server/plugins/oidc-secrets.ts`) that runs during container initialization. 
+> **Runtime Auto-Generation & Auto-Hashing Protection:** `nuxt-oidc-auth` strictly requires session and auth secrets to be at least **48 characters long** to prevent session hijack. To make deployment completely error-free and out-of-the-box ready, glide. includes a **runtime Nitro server plugin** (`apps/frontend/server/plugins/oidc-secrets.ts`) that runs during container initialization.
 > 
-> Even if you use **pre-built production images (Option A)** and supply short secrets in your `docker-compose.yml`, they are automatically hashed with SHA-512 on startup before the server binds, ensuring a robust, secure, and crash-free deployment!
+> If you leave these variables blank, they are **fully auto-generated with cryptographically secure random values on startup**. If you do provide secrets in your `docker-compose.yml` but they are too short (less than 48 characters), they are automatically hashed with SHA-512 on startup before the server binds, ensuring a robust, secure, and crash-free deployment!
 
 ---
 
