@@ -18,11 +18,11 @@ export const useApi = () => {
     isApiLoading.value = true
 
     try {
-      return await $fetch<T>(url, {
+      return await $fetch<any>(url, {
         baseURL: config.public.apiBase,
         ...options,
         headers
-      })
+      }) as T
     } finally {
       activeRequests.value--
       if (activeRequests.value <= 0) {

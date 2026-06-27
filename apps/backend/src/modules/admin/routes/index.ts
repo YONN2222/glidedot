@@ -159,23 +159,21 @@ export default async function adminRoutes(fastify: FastifyInstance) {
 
         const dateStr = fromDate.toISOString().replace('T', ' ').slice(0, 19);
 
-        let logsQuery = fastify.db.select({
+        const conditions = [
+            or(eq(activityLogs.action, 'TRANSLATION_UPDATED'), eq(activityLogs.action, 'AUTO_TRANSLATED'))
+        ];
+
+        if (timeframe !== 'all') {
+            conditions.push(gte(activityLogs.createdAt, dateStr));
+        }
+
+        const logs = await fastify.db.select({
             action: activityLogs.action,
             details: activityLogs.details,
             createdAt: activityLogs.createdAt
         })
         .from(activityLogs)
-        .where(or(eq(activityLogs.action, 'TRANSLATION_UPDATED'), eq(activityLogs.action, 'AUTO_TRANSLATED')));
-
-        let logs;
-        if (timeframe !== 'all') {
-            logs = await logsQuery.where(and(
-                or(eq(activityLogs.action, 'TRANSLATION_UPDATED'), eq(activityLogs.action, 'AUTO_TRANSLATED')), 
-                gte(activityLogs.createdAt, dateStr)
-            ));
-        } else {
-            logs = await logsQuery;
-        }
+        .where(and(...conditions));
 
         const timeSpentArr: number[] = [];
         const dailyStats = new Map<string, { manualCount: number, autoCount: number, timeSavedMs: number }>();
@@ -235,7 +233,7 @@ export default async function adminRoutes(fastify: FastifyInstance) {
         if (timeframe === 'all') {
             // Find earliest date
             if (logs.length > 0) {
-                const earliest = logs.reduce((min, log) => {
+                const earliest = logs.reduce((min: Date, log: { createdAt: string }) => {
                     const d = new Date(log.createdAt);
                     return d < min ? d : min;
                 }, new Date());
