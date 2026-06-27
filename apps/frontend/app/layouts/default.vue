@@ -91,27 +91,27 @@ const primaryItems: ComputedRef<NavigationMenuItem[]> = computed(() => {
       children: [
         {
           label: 'Manage Projects',
-          icon: 'i-lucide-folder-cog',
+          icon: 'i-lucide-folder-git-2',
           href: '/admin/projects'
         },
         {
           label: 'Manage Teams',
-          icon: 'i-lucide-users-round',
+          icon: 'i-lucide-users',
           href: '/admin/teams'
         },
         {
           label: 'Manage Users',
-          icon: 'i-lucide-user-cog',
+          icon: 'i-lucide-users',
           href: '/admin/users'
         },
         {
           label: 'Insights',
-          icon: 'i-lucide-activity',
+          icon: 'i-lucide-bar-chart-2',
           href: '/admin/insights'
         },
         {
           label: 'Migration',
-          icon: 'i-lucide-file-json-2',
+          icon: 'i-lucide-database',
           href: '/admin/migration'
         },
         {
@@ -121,12 +121,12 @@ const primaryItems: ComputedRef<NavigationMenuItem[]> = computed(() => {
           children: [
             {
               label: 'General',
-              icon: 'i-lucide-sliders',
+              icon: 'i-lucide-settings-2',
               href: '/admin/settings'
             },
             {
               label: 'Theming',
-              icon: 'i-lucide-palette',
+              icon: 'i-lucide-paintbrush',
               href: '/admin/settings/theming'
             }
           ]
@@ -141,17 +141,17 @@ const primaryItems: ComputedRef<NavigationMenuItem[]> = computed(() => {
 const secondaryItems = computed<NavigationMenuItem[]>(() => [
   {
     label: 'Structure',
-    icon: 'i-lucide-database',
+    icon: 'i-lucide-layers',
     href: `/projects/${currentProject.value?.id}/structure`
   },
   {
     label: 'Conventions',
-    icon: 'i-lucide-book-dashed',
+    icon: 'i-lucide-book-open',
     href: `/projects/${currentProject.value?.id}/conventions`
   },
   {
     label: 'Translations',
-    icon: 'i-lucide-a-large-small',
+    icon: 'i-lucide-languages',
     href: `/projects/${currentProject.value?.id}/translations`
   },
   {
@@ -162,7 +162,7 @@ const secondaryItems = computed<NavigationMenuItem[]>(() => [
   },
   {
     label: 'Git Sync',
-    icon: 'i-lucide-git-merge',
+    icon: 'i-lucide-git-pull-request',
     href: `/projects/${currentProject.value?.id}/git-sync`
   },
   {

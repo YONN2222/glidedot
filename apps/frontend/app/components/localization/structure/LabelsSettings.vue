@@ -29,6 +29,7 @@ const columns: TableColumn<TranslationLabel>[] = [
   {id: 'select'},
   {accessorKey: 'name', header: 'Label Name'},
   {accessorKey: 'color', header: 'Color'},
+  {id: 'actions'}
 ]
 
 const {
@@ -77,6 +78,11 @@ const saveLabelName = async (labelId: number) => {
     }
   }
   editingLabelId.value = null
+}
+
+const confirmDeleteSingleLabel = (label: TranslationLabel) => {
+  isDeleteModalOpen.value = true
+  rowSelection.value = { [realLabels.value.indexOf(label).toString()]: true }
 }
 
 const updateLabelColor = useDebounceFn(async (label: TranslationLabel, newColor: string) => {
@@ -242,6 +248,25 @@ const toggleSelection = (label: TranslationLabel) => {
               </template>
             </u-popover>
           </template>
+
+          <template #actions-cell="{ row }">
+            <div class="flex justify-end gap-2" @click.stop>
+              <u-button 
+                icon="i-lucide-pencil" 
+                color="neutral" 
+                variant="ghost" 
+                size="sm"
+                @click="startEditingLabel(row.original)" 
+              />
+              <u-button 
+                icon="i-lucide-trash-2" 
+                color="error" 
+                variant="ghost" 
+                size="sm"
+                @click="confirmDeleteSingleLabel(row.original)" 
+              />
+            </div>
+          </template>
         </u-table>
       </div>
 
@@ -267,14 +292,24 @@ const toggleSelection = (label: TranslationLabel) => {
                   @blur="saveLabelName(label.id)" 
                   @click.stop
                 />
-                <u-button 
-                  v-if="editingLabelId !== label.id" 
-                  icon="i-lucide-pencil" 
-                  size="xs" 
-                  variant="ghost" 
-                  color="neutral" 
-                  @click.stop="startEditingLabel(label)" 
-                />
+                <div class="flex items-center gap-1" @click.stop>
+                  <u-button 
+                    v-if="editingLabelId !== label.id" 
+                    icon="i-lucide-pencil" 
+                    size="xs" 
+                    variant="ghost" 
+                    color="neutral" 
+                    @click="startEditingLabel(label)" 
+                  />
+                  <u-button 
+                    v-if="editingLabelId !== label.id" 
+                    icon="i-lucide-trash-2" 
+                    size="xs" 
+                    variant="ghost" 
+                    color="error" 
+                    @click="confirmDeleteSingleLabel(label)" 
+                  />
+                </div>
               </div>
               <div class="flex items-center gap-2">
                 <u-popover>
