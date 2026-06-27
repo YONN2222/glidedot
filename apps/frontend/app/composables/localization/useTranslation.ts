@@ -206,7 +206,7 @@ export function useTranslation() {
         isModalOpen.value = true
     }
 
-    const saveTranslation = async (keyId: number, langId: number, langCode: string, text: string, isGenerated: boolean, timeSpentMs: number = 0) => {
+    const saveTranslation = async (keyId: number, langId: number, langCode: string, text: string, isGenerated: boolean, timeSpentMs: number = 0, silent: boolean = false) => {
         if (!projectId.value) return
 
         try {
@@ -219,7 +219,9 @@ export function useTranslation() {
                 translations.value[keyId] = {}
             }
             translations.value[keyId][langCode] = {text, isGenerated}
-            toast.add({ title: 'Success', description: 'Translation saved successfully.', color: 'success' })
+            if (!silent) {
+                toast.add({ title: 'Success', description: 'Translation saved successfully.', color: 'success' })
+            }
         } catch (e) {
             toast.add({ title: 'Error', description: 'Failed to save translation.', color: 'error' })
             console.error("Failed to save translation", e)
