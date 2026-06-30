@@ -60,6 +60,7 @@ Check out the guides to learn how to deploy, configure, and use glide.:
 - [**Namespaces & Best Practices**](docs/BEST-PRACTICE.md) — Learn how to structure keys with namespaces and labels for large projects.
 - [**Migration & Backups**](docs/MIGRATION.md) — Import/export translations and configure automated S3 backups.
 - [**Theming & UI Customization**](docs/THEMING.md) — Learn about UI customizations and dark mode settings.
+- [**Plugins**](docs/plugins/README.md) — Learn how to manage and create your own plugins for glide.
 
 ## 5. Repository Structure
 
