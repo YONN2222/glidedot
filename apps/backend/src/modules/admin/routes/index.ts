@@ -118,7 +118,7 @@ export default async function adminRoutes(fastify: FastifyInstance) {
                 const sum = stats.timeSpentArr.reduce((acc, val) => acc + val, 0);
                 stats.averageTranslationSpeedMs = sum / stats.timeSpentArr.length;
             }
-            // @ts-ignore
+            // @ts-expect-error - timeSpentArr is an internal aggregation field not part of the response type
             delete stats.timeSpentArr;
         }
 

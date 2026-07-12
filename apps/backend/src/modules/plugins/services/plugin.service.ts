@@ -23,7 +23,7 @@ export interface PluginManifest {
 
 export class PluginSystem {
     private plugins = new Map<string, { manifest: PluginManifest; module: any; dirPath: string }>();
-    private hooks = new Map<string, Function[]>();
+    private hooks = new Map<string, ((...args: any[]) => any)[]>();
     private db: any;
 
     constructor(db: any) {
@@ -114,7 +114,7 @@ export class PluginSystem {
     /**
      * Hook registration for plugins
      */
-    on(event: string, callback: Function) {
+    on(event: string, callback: (...args: any[]) => any) {
         if (!this.hooks.has(event)) {
             this.hooks.set(event, []);
         }

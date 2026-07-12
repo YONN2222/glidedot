@@ -237,8 +237,8 @@ const handleKeyReview = async (keyData: { id: number }, action: 'approve' | 'rej
         <div v-else-if="filteredReviews.length === 0" class="p-12 text-center text-neutral-500 flex flex-col items-center gap-2">
           <u-icon name="i-lucide-check-circle-2" class="w-12 h-12 text-success-500/50 mb-2" />
           <h3 class="text-lg font-medium text-neutral-300">All caught up!</h3>
-          <p class="max-w-md" v-if="searchQuery">No reviews match your search query.</p>
-          <p class="max-w-md" v-else>There are no translations pending review right now.</p>
+          <p v-if="searchQuery" class="max-w-md">No reviews match your search query.</p>
+          <p v-else class="max-w-md">There are no translations pending review right now.</p>
         </div>
         
         <div v-else>
@@ -432,8 +432,8 @@ const handleKeyReview = async (keyData: { id: number }, action: 'approve' | 'rej
             <div v-else-if="filteredKeys.length === 0" class="p-12 text-center text-neutral-500 flex flex-col items-center gap-2">
               <u-icon name="i-lucide-check-circle-2" class="w-12 h-12 text-success-500/50 mb-2" />
               <h3 class="text-lg font-medium text-neutral-300">All caught up!</h3>
-              <p class="max-w-md" v-if="searchQuery">No key reviews match your search query.</p>
-              <p class="max-w-md" v-else>There are no keys pending review right now.</p>
+              <p v-if="searchQuery" class="max-w-md">No key reviews match your search query.</p>
+              <p v-else class="max-w-md">There are no keys pending review right now.</p>
             </div>
             
             <div v-else>
@@ -504,7 +504,7 @@ const handleKeyReview = async (keyData: { id: number }, action: 'approve' | 'rej
                           <span class="text-[10px] uppercase font-bold text-error-500 font-sans">Current</span>
                           <span class="text-error-400 line-through opacity-70 break-all">{{ key.key }}</span>
                         </div>
-                        <div class="h-px w-full bg-neutral-800"></div>
+                        <div class="h-px w-full bg-neutral-800"/>
                         <div class="flex flex-col gap-1">
                           <span class="text-[10px] uppercase font-bold text-success-500 font-sans">Suggested</span>
                           <span class="text-success-400 break-all">{{ key.draftKey }}</span>
