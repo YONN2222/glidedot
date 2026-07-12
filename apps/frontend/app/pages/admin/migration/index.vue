@@ -50,16 +50,21 @@ const loadProjects = async () => {
   }
 }
 
+const isLoadingLanguages = ref(false)
+
 const loadLanguages = async () => {
   if (!selectedProjectId.value) {
     languages.value = []
     return
   }
+  isLoadingLanguages.value = true
   try {
     const langs = await fetchApi(`/localization/projects/${selectedProjectId.value}/languages`)
     languages.value = langs as { id: number; code: string; name: string }[]
   } catch {
     toast.add({ title: 'Error', description: 'Failed to load languages', color: 'error' })
+  } finally {
+    isLoadingLanguages.value = false
   }
 }
 
@@ -323,13 +328,27 @@ const triggerS3Backup = async () => {
                 </u-form-field>
 
                 <u-form-field label="Language (For Translations)">
-                  <u-select
+                  <u-select-menu
                     v-model="selectedLanguageId"
                     :items="languages.map(l => ({ label: l.name, value: l.id }))"
+                    value-key="value"
+                    :search-input="false"
                     placeholder="Select language"
                     :disabled="!selectedProjectId"
+                    :loading="isLoadingLanguages"
                     class="w-full"
-                  />
+                  >
+                    <template #empty>
+                      <u-empty
+                        icon="i-lucide-languages"
+                        title="No languages yet"
+                        description="This project doesn't have any languages configured."
+                        :actions="[{ label: 'Add Language', icon: 'i-lucide-plus', color: 'primary', variant: 'subtle', to: `/projects/${selectedProjectId}/structure?tab=languages` }]"
+                        variant="naked"
+                        size="sm"
+                      />
+                    </template>
+                  </u-select-menu>
                 </u-form-field>
               </div>
 
