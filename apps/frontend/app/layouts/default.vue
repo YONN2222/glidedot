@@ -506,7 +506,7 @@ const handleMobileNavClick = (item: any) => {
         <span class="text-[10px] mt-1 font-medium">{{ item.label }}</span>
         <span 
           v-if="item.active" 
-          class="absolute bottom-1 w-1.5 h-1.5 bg-primary-500 rounded-full shadow-[0_0_10px_rgba(var(--color-primary-500),0.8)]"
+          class="absolute bottom-0 w-1.5 h-1.5 bg-primary-500 rounded-full shadow-[0_0_10px_rgba(var(--color-primary-500),0.8)]"
         ></span>
       </button>
     </div>
