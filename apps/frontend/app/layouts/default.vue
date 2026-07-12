@@ -17,6 +17,7 @@ await loadSettings()
 const { data: projectsData } = await useAsyncData('projects', () => fetchApi('/localization/projects'))
 const projects = computed<Project[]>(() => (projectsData.value as Project[]) || [])
 
+const SIDEBAR_STORAGE_KEY = 'glide_sidebar_open'
 const isSidebarOpen = ref(true)
 const isMobileMenuOpen = ref(false)
 const isSettingsMenuOpen = ref(false)
@@ -252,9 +253,16 @@ const profileItems: DropdownMenuItem[] = [
   }
 ]
 
-// Watch for sidebar changes
+// Persist sidebar open/collapsed state across sessions
+onMounted(() => {
+  const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY)
+  if (stored !== null) {
+    isSidebarOpen.value = stored === 'true'
+  }
+})
+
 watch(isSidebarOpen, (isOpen) => {
-  // If we needed to handle anything on close, we could do it here
+  localStorage.setItem(SIDEBAR_STORAGE_KEY, String(isOpen))
 })
 
 // Watch for route changes to close mobile menu
