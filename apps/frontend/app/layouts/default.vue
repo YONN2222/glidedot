@@ -70,6 +70,10 @@ const toggleSidebar = (): void => {
   isSidebarOpen.value = !isSidebarOpen.value;
 }
 
+const navLinkUi = computed(() => ({
+  link: isSidebarOpen.value ? 'p-2 overflow-hidden' : 'size-10 p-0 justify-center mx-auto overflow-hidden'
+}))
+
 const apiDocsItems: ComputedRef<NavigationMenuItem[]> = computed(() => [
   {
     label: 'API-Docs',
@@ -88,6 +92,7 @@ const primaryItems: ComputedRef<NavigationMenuItem[]> = computed(() => {
     {
       label: 'Projects',
       icon: 'i-lucide-layout-dashboard',
+      active: !isSidebarOpen.value && route.path.startsWith('/projects'),
       defaultOpen: route.path.startsWith('/projects'),
       children: projects.value.length > 0 ? [
         ...projects.value.map(project => ({
@@ -111,6 +116,7 @@ const primaryItems: ComputedRef<NavigationMenuItem[]> = computed(() => {
       label: 'Admin',
       icon: 'i-lucide-shield-check',
       class: 'hidden md:flex',
+      active: !isSidebarOpen.value && route.path.startsWith('/admin'),
       defaultOpen: route.path.startsWith('/admin'),
       children: [
         {
@@ -373,7 +379,7 @@ const handleMobileNavClick = (item: any) => {
 <template>
   <div class="fixed inset-0 flex bg-black overflow-hidden">
     <u-sidebar class="flex max-md:!hidden" v-model:open="isSidebarOpen" variant="inset" collapsible="icon" side="left" title="Navigation"
-               :ui="{ header: 'min-h-none p-2' }">
+               :ui="{ header: 'min-h-none p-2', body: isSidebarOpen ? '' : 'px-2' }">
 
       <template #header>
         <div class="flex flex-col items-center w-full">
@@ -401,10 +407,10 @@ const handleMobileNavClick = (item: any) => {
       </template>
 
       <u-navigation-menu :key="route.path.split('/')[1]" :items="primaryItems" orientation="vertical" multiple
-                         :ui="{ link: 'p-2 overflow-hidden' }"/>
+                         :collapsed="!isSidebarOpen" popover :ui="navLinkUi"/>
       <u-separator/>
       <u-navigation-menu v-if="isProjectContext" :key="`secondary-${route.path.split('/')[1]}`" :items="secondaryItems" multiple
-                         orientation="vertical" :ui="{ link: 'p-2 overflow-hidden' }"/>
+                         orientation="vertical" :collapsed="!isSidebarOpen" popover :ui="navLinkUi"/>
                          
       <div class="mt-auto" />
       <u-separator/>
