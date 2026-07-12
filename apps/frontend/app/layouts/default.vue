@@ -415,7 +415,7 @@ const handleMobileNavClick = (item: any) => {
       <div class="mt-auto" />
       <u-separator/>
       <u-navigation-menu :key="`api-docs-${route.path.split('/')[1]}`" :items="apiDocsItems" orientation="vertical"
-                         :ui="{ link: 'p-2 overflow-hidden' }"/>
+                         :collapsed="!isSidebarOpen" popover :ui="navLinkUi"/>
 
       <template #footer>
         <u-dropdown-menu :items="profileItems" :content="{ side: 'top' }" class="cursor-pointer">
