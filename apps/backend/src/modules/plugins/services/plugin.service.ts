@@ -268,7 +268,7 @@ export class PluginSystem {
         const entries = zip.getEntries();
         
         // Find manifest.json (could be nested inside a GitHub repository subfolder)
-        let manifestEntry = entries.find(e => e.entryName === "manifest.json" || e.entryName.endsWith("/manifest.json"));
+        const manifestEntry = entries.find(e => e.entryName === "manifest.json" || e.entryName.endsWith("/manifest.json"));
         if (!manifestEntry) {
             throw new Error("Invalid plugin zip: manifest.json not found.");
         }

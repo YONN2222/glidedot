@@ -23,9 +23,9 @@ export default fp(async (fastify) => {
         const statusCode = reply.statusCode || 200;
         const success = statusCode >= 200 && statusCode < 300;
 
-        let data = payload;
-        let message = success ? 'Request completed successfully.' : 'An error occurred.';
-        let shortCode = success ? 'SUCCESS' : 'ERROR';
+        const data = payload;
+        const message = success ? 'Request completed successfully.' : 'An error occurred.';
+        const shortCode = success ? 'SUCCESS' : 'ERROR';
 
         // Check if payload is an object that contains logical older wrapper fields
         if (payload && typeof payload === 'object') {
