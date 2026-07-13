@@ -138,6 +138,7 @@ export default defineNuxtConfig({
         optimizeDeps: {
             include: [
                 '@tanstack/vue-table',
+                '@vueuse/core',
                 'canvas-confetti',
                 'date-fns',
                 'echarts/charts',
