@@ -1,15 +1,17 @@
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import AdmZip from 'adm-zip';
 import { S3BackupService } from './s3-backup.service';
 
-import { 
-    projects, languages, projectLanguages, labels, 
+import {
+    projects, languages, projectLanguages, labels,
     translationKeys, translations, keysToLabels, activityLogs,
     keyTemplates, keyGlossary, keyVariables
 } from '../../localization/schema';
 
+type Tx = Parameters<Parameters<FastifyInstance['db']['transaction']>[0]>[0];
+
 // Helper function to insert in chunks to avoid SQLite 'too many SQL variables' error
-async function insertInChunks(tx: any, table: any, data: any[], chunkSize: number = 500) {
+async function insertInChunks<T extends Parameters<Tx['insert']>[0]>(tx: Tx, table: T, data: (T extends { $inferInsert: infer I } ? I : never)[], chunkSize: number = 500) {
     for (let i = 0; i < data.length; i += chunkSize) {
         const chunk = data.slice(i, i + chunkSize);
         await tx.insert(table).values(chunk);
@@ -70,7 +72,7 @@ const migrationModule: FastifyPluginAsync = async (fastify, _opts) => {
             const zip = new AdmZip(buffer);
             const zipEntries = zip.getEntries();
             
-            const backupEntry = zipEntries.find((entry: any) => entry.entryName === 'backup.json');
+            const backupEntry = zipEntries.find((entry) => entry.entryName === 'backup.json');
             if (!backupEntry) {
                 return reply.status(400).send({ error: 'Invalid backup file: backup.json not found' });
             }

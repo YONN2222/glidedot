@@ -1,4 +1,5 @@
 import fp from 'fastify-plugin';
+import { FastifyError } from 'fastify';
 
 export default fp(async (fastify) => {
     // Add preSerialization hook to wrap all API responses in a unified envelope
@@ -29,7 +30,7 @@ export default fp(async (fastify) => {
 
         // Check if payload is an object that contains logical older wrapper fields
         if (payload && typeof payload === 'object') {
-            const p = payload as Record<string, any>;
+            const p = payload as Record<string, unknown>;
             // If it's a simple logical wrapper returned by older handler e.g. { success: true, message: '...' }
             if ('success' in p && typeof p.success === 'boolean') {
                 let finalData = p.data;
@@ -61,7 +62,7 @@ export default fp(async (fastify) => {
     });
 
     // Custom Error Handler to format errors into the exact same unified ApiResponse envelope
-    fastify.setErrorHandler((error: any, request, reply) => {
+    fastify.setErrorHandler((error: FastifyError, request, reply) => {
         const statusCode = error.statusCode || 500;
         const success = false;
         const shortCode = error.code || 'INTERNAL_SERVER_ERROR';

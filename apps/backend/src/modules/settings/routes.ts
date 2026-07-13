@@ -15,7 +15,7 @@ export const settingsRoutes: FastifyPluginAsync = async (app: FastifyInstance) =
   // or we can make GET public if it's strictly for UI appearance.
   app.get('/', { preHandler: [requireAdmin] }, async (_request, _reply) => {
     const allSettings = await app.db.select().from(settings);
-    const settingsObj: Record<string, any> = {};
+    const settingsObj: Record<string, string | boolean> = {};
     for (const row of allSettings) {
       if (row.key === 'deepLApiKey' && row.value) {
         try {
@@ -36,7 +36,7 @@ export const settingsRoutes: FastifyPluginAsync = async (app: FastifyInstance) =
     const { inArray } = await import('drizzle-orm');
     const publicKeys = ['maintenanceMode', 'logoType', 'logoUrl', 'logoUrlMinimal', 'logoText', 'logoSize', 'logoShowDot', 'primaryColor', 'themeMode', 'customBackgroundColor'];
     const rows = await app.db.select().from(settings).where(inArray(settings.key, publicKeys));
-    const result: Record<string, any> = {};
+    const result: Record<string, string | boolean> = {};
     for (const r of rows) {
       result[r.key] = r.value;
     }

@@ -29,7 +29,7 @@ export class ProjectService {
         .where(eq(teamMembers.userId, user.id))
         .groupBy(projects.id);
 
-        let oidcLinkedProjects: any[] = [];
+        let oidcLinkedProjects: typeof userProjects = [];
         if (oidcGroupsArr.length > 0) {
             const { inArray } = await import('drizzle-orm');
             
@@ -381,7 +381,7 @@ export class ProjectService {
         let translatedTexts: string[] = [];
         if (providerId === 'deepl') {
             const { DeeplService } = await import('../../services/deepl.service');
-            const deeplService = new DeeplService(this.db as any);
+            const deeplService = new DeeplService(this.db);
             translatedTexts = await deeplService.translate(missingKeys.map(k => k.text), targetLang.code, sourceLang.code);
         } else if (providerId === 'google') {
             const { GoogleService } = await import('../../services/google.service');
@@ -588,12 +588,10 @@ export class ProjectService {
         const totalLanguages = distinctLanguageIds.size;
 
         const keyIds = keys.map(k => k.id);
-        let totalTranslations = 0;
-        let transRecs: any[] = [];
-        if (keyIds.length > 0) {
-            transRecs = await this.db.select().from(translations).where(inArray(translations.keyId, keyIds));
-            totalTranslations = transRecs.filter(t => t.value.trim() !== '').length;
-        }
+        const transRecs = keyIds.length > 0
+            ? await this.db.select().from(translations).where(inArray(translations.keyId, keyIds))
+            : [];
+        const totalTranslations = transRecs.filter(t => t.value.trim() !== '').length;
 
         let expectedTranslations = 0;
         

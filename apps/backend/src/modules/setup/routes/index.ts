@@ -14,7 +14,7 @@ export default async function setupRoutes(fastify: FastifyInstance) {
         if (!required) {
             return { success: true };
         }
-        const body = request.body as any;
+        const body = request.body as { initialProjectName?: string, adminPassword?: string };
         return setupService.performInitialSetup(body);
     });
 }
