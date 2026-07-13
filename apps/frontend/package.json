@@ -34,6 +34,7 @@
     "ofetch": "^1.5.1",
     "tailwindcss": "^4.3.2",
     "typescript": "^6.0.3",
+    "ufo": "^1.6.4",
     "vue": "^3.5.39",
     "vue-echarts": "^8.0.1",
     "vue-router": "^5.1.0"
