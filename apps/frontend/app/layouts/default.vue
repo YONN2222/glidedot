@@ -6,9 +6,6 @@ const route = useRoute();
 const { fetchApi, isApiLoading } = useApi()
 const { user, isAdmin } = useAuth()
 const { settings, loadSettings } = useSettings()
-const appConfig = useAppConfig()
-
-
 
 await loadSettings()
 
@@ -21,8 +18,6 @@ const SIDEBAR_STORAGE_KEY = 'glide_sidebar_open'
 const isSidebarOpen = ref(true)
 const isMobileMenuOpen = ref(false)
 const isSettingsMenuOpen = ref(false)
-const openPrimaryItems = ref([])
-const openSecondaryItems = ref(['item-0'])
 
 const isProjectContext = computed(() => route.path.startsWith("/projects/"))
 const { currentProject } = useProject(projects)
@@ -385,9 +380,16 @@ const handleMobileNavClick = (item: any) => {
 </script>
 
 <template>
-  <div class="fixed inset-0 flex bg-black overflow-hidden">
-    <u-sidebar class="flex max-md:!hidden" v-model:open="isSidebarOpen" variant="inset" collapsible="icon" side="left" title="Navigation"
-               :ui="{ header: 'min-h-none p-2', body: isSidebarOpen ? '' : 'px-2' }">
+<div class="fixed inset-0 flex bg-black overflow-hidden">
+  <u-sidebar
+    v-model:open="isSidebarOpen"
+    class="flex max-md:!hidden"
+    variant="inset"
+    collapsible="icon"
+    side="left"
+    title="Navigation"
+    :ui="{ header: 'min-h-none p-2', body: isSidebarOpen ? '' : 'px-2' }"
+  >
 
       <template #header>
         <div class="flex flex-col items-center w-full">
@@ -452,7 +454,7 @@ const handleMobileNavClick = (item: any) => {
       </template>
     </u-sidebar>
 
-    <div class="flex-1 flex flex-col overflow-y-auto overflow-x-hidden md:rounded-xl md:ring md:ring-default bg-neutral-900 md:my-6 relative">
+    <div class="flex-1 flex flex-col overflow-y-auto overflow-x-hidden md:rounded-xl md:ring md:ring-default bg-neutral-900 md:my-6 md:mr-6 relative">
 
       <div class="sticky top-0 z-40 bg-neutral-900/80 backdrop-blur-xl py-2 flex items-center px-4 border-b border-default space-x-4 pt-[max(0.5rem,env(safe-area-inset-top))]">
         <u-button
@@ -498,9 +500,9 @@ const handleMobileNavClick = (item: any) => {
       <button
         v-for="item in mobileNavItems"
         :key="item.label"
-        @click="handleMobileNavClick(item)"
         class="flex flex-col items-center justify-center flex-1 py-1.5 relative transition-all duration-200 active:scale-95 text-neutral-400"
         :class="item.active ? 'text-primary-500' : 'hover:text-white'"
+        @click="handleMobileNavClick(item)"
       >
         <u-icon :name="item.icon" class="w-6 h-6 transition-transform duration-200" :class="item.active ? 'scale-110' : ''" />
         <span class="text-[10px] mt-1 font-medium">{{ item.label }}</span>
@@ -519,7 +521,7 @@ const handleMobileNavClick = (item: any) => {
           v-if="isBottomSheetOpen" 
           class="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[90]" 
           @click="closeBottomSheet"
-        ></div>
+        />
       </transition>
 
       <!-- Bottom Sheet Drawer -->
@@ -530,7 +532,7 @@ const handleMobileNavClick = (item: any) => {
           style="padding-bottom: 1.5rem; padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));"
         >
           <!-- Handle bar drag indicator -->
-          <div class="w-12 h-1 bg-neutral-800 rounded-full mx-auto my-3 shrink-0"></div>
+          <div class="w-12 h-1 bg-neutral-800 rounded-full mx-auto my-3 shrink-0"/>
 
           <!-- Sheet Content -->
           <div class="overflow-y-auto px-6 py-2 flex-1">
@@ -544,8 +546,8 @@ const handleMobileNavClick = (item: any) => {
                 <button
                   v-for="sub in projectMoreItems"
                   :key="sub.href"
-                  @click="navigateAndClose(sub.href)"
                   class="flex items-center gap-3 p-3.5 rounded-xl bg-neutral-900 border border-neutral-800/80 hover:border-neutral-700 text-left transition-all duration-200 active:scale-98"
+                  @click="navigateAndClose(sub.href)"
                 >
                   <u-icon :name="sub.icon" class="w-5 h-5 text-neutral-400" />
                   <span class="text-sm font-medium text-white flex-1">{{ sub.label }}</span>
@@ -565,15 +567,15 @@ const handleMobileNavClick = (item: any) => {
                 <button
                   v-for="project in projects"
                   :key="project.id"
-                  @click="navigateToProject(project.id)"
                   class="flex items-center gap-3 p-3 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-left transition-all duration-200 active:scale-98"
+                  @click="navigateToProject(project.id)"
                 >
                   <div class="w-10 h-10 rounded-lg bg-neutral-800/80 flex items-center justify-center border border-neutral-700/50">
                     <u-icon name="i-lucide-folder" class="w-5 h-5 text-neutral-400" />
                   </div>
                   <div class="flex-grow min-w-0">
                     <div class="font-medium text-white text-sm truncate">{{ project.name }}</div>
-                    <div class="text-xs text-neutral-500 truncate" v-if="project.description">{{ project.description }}</div>
+                    <div v-if="project.description" class="text-xs text-neutral-500 truncate">{{ project.description }}</div>
                   </div>
                   <u-icon name="i-lucide-chevron-right" class="w-4 h-4 text-neutral-500" />
                 </button>
@@ -593,8 +595,8 @@ const handleMobileNavClick = (item: any) => {
                 <button
                   v-for="sub in adminItems"
                   :key="sub.href"
-                  @click="navigateAndClose(sub.href)"
                   class="flex flex-col items-center justify-center p-4 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-center transition-all duration-200 active:scale-95 gap-2"
+                  @click="navigateAndClose(sub.href)"
                 >
                   <u-icon :name="sub.icon" class="w-6 h-6 text-neutral-400" />
                   <span class="text-xs font-medium text-neutral-300">{{ sub.label }}</span>
@@ -620,8 +622,8 @@ const handleMobileNavClick = (item: any) => {
                 <button
                   v-for="sub in profileItems"
                   :key="sub.href as string"
-                  @click="navigateAndClose(sub.href as string)"
                   class="flex items-center gap-3 p-3.5 rounded-xl bg-neutral-900 border border-neutral-800/80 hover:border-neutral-700 text-left transition-all duration-200 active:scale-98"
+                  @click="navigateAndClose(sub.href as string)"
                 >
                   <u-icon :name="sub.icon" class="w-5 h-5 text-neutral-400" />
                   <span class="text-sm font-medium text-white flex-1">{{ sub.label }}</span>
