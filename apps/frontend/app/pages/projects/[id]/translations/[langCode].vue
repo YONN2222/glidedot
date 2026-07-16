@@ -2,6 +2,7 @@
 import { useTranslation } from '~/composables/localization/useTranslation'
 import { useTranslationTimer } from '~/composables/localization/useTranslationTimer'
 import { useRoute, useRouter } from 'vue-router'
+import type { TranslationLabel } from '~/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -37,7 +38,7 @@ const hideTranslated = ref(false)
 interface TranslationRow {
   keyId: number
   keyName: string
-  labels: { id: number; name: string; color: string }[]
+  labels: TranslationLabel[]
   sourceText: string
   targetText: string
   reviewStatus?: string
@@ -153,9 +154,12 @@ definePageMeta({
         </div>
       </div>
 
-      <div class="flex items-center gap-4 w-full md:w-auto">
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
         <u-input v-model="search" icon="i-lucide-search" size="lg" placeholder="Search keys or text..." class="w-full md:w-80" />
-        <u-checkbox v-model="hideTranslated" label="Hide translated" />
+        <label class="flex items-center gap-2 shrink-0 whitespace-nowrap cursor-pointer select-none px-1">
+          <u-switch v-model="hideTranslated" />
+          <span class="text-sm text-neutral-300">Hide translated</span>
+        </label>
       </div>
     </div>
 
@@ -189,9 +193,9 @@ definePageMeta({
           class="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden"
       >
         <!-- Term header -->
-        <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-800 gap-3 flex-wrap">
-          <span class="font-mono text-sm text-neutral-200">{{ row.keyName }}</span>
-          <div class="flex items-center gap-1 flex-wrap">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 border-b border-neutral-800 gap-2 sm:gap-3">
+          <span class="font-mono text-sm text-neutral-200 break-all min-w-0">{{ row.keyName }}</span>
+          <div class="flex items-center gap-1 flex-wrap shrink-0">
             <u-badge v-for="label in row.labels" :key="label.id" variant="subtle" color="neutral" size="sm"
                      class="flex items-center gap-1"
                      :style="{ backgroundColor: `${label.color}20`, color: label.color, borderColor: `${label.color}20` }">
